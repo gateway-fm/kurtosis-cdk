@@ -191,6 +191,8 @@ zkevm.pool-manager-url: {{.pool_manager_url}}
 zkevm.initial-batch.config: /etc/cdk-erigon/first-batch-config.json
 # {{end}}
 
+zkevm.initial-commitment: {{ .initial_commitment }}
+
 # --------------------------------------------------------------------------------------------------
 #   ______  _________     ____  __           ____  ____   ____
 #  |__  / |/ / ____\ \   / /  \/  |         |  _ \|  _ \ / ___|
@@ -239,9 +241,9 @@ zkevm.data-stream-port: {{.zkevm_data_stream_port}}
 # - 3: Latest format with additional features
 # Default: 2
 # fork12 or after {{if eq .zkevm_rollup_fork_name "banana"}}
-zkevm.datastream-version: 3
+# zkevm.datastream-version: 3
 # before fork12 {{else}}
-zkevm.datastream-version: 2
+# zkevm.datastream-version: 2
 # {{end}}
 
 # Maximum time to wait for a new block when requesting from the data streamer.
