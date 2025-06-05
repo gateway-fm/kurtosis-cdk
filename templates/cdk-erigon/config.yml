@@ -183,7 +183,7 @@ zkevm.da-url: ""
 # URL of the pool manager, applicable only for non-sequencer nodes.
 # If specified, all eth_sendRawTransaction calls will be redirected to this service for processing.
 # Default: ""
-zkevm.pool-manager-url: {{.pool_manager_url}}
+# zkevm.pool-manager-url: {{.pool_manager_url}}
 # {{end}}
 
 # {{if eq .consensus_contract_type "pessimistic"}}
