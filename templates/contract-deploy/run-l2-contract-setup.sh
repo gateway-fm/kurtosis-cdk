@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euox pipefail
+
 global_log_level="{{.global_log_level}}"
 if [[ $global_log_level == "debug" ]]; then
     set -x
@@ -92,7 +94,7 @@ deployer_address="0x4e59b44847b379578588920ca78fbf26c0b4956c"
 
 # We set this conditionally because older versions of cast use
 # `derive-private-key` while newer version use `private-key`.
-l1_private_key=$(cast wallet derive-private-key "{{.l1_preallocated_mnemonic}}" | grep "Private key:" | awk '{print $3}')
+l1_private_key=$(cast wallet derive-private-key "{{.l1_preallocated_mnemonic}}" | grep -Eo '0x[a-fA-F0-9]{64}|[a-fA-F0-9]{64}' | head -n1)
 if [[ -z "$l1_private_key" ]]; then
     l1_private_key=$(cast wallet private-key "{{.l1_preallocated_mnemonic}}")
 fi
