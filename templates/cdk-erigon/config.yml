@@ -998,3 +998,14 @@ db.size.limit: 8TB
 # - lightclient.x
 # - sentinel.x
 
+# Honour the actual chainspec values. This means that no chainspec values will get changed based on normalcy mode.
+# Default: false.
+# {{if .enable_normalcy}}
+zkevm.honour-chainspec: {{.zkevm_honour_chainspec}}
+# {{end}}
+
+# {{if .enable_normalcy}}
+# What merkle tree to use for the zkevm rollup.
+# Default: smt
+zkevm.initial-commitment: {{.zkevm_initial_commitment}}
+# {{end}}
