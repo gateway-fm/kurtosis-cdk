@@ -362,6 +362,7 @@ DEFAULT_ROLLUP_ARGS = {
     # true = mock
     # false = network
     "op_succinct_mock": False,
+    "initial_commitment": "smt",
 }
 
 DEFAULT_PLESS_ZKEVM_NODE_ARGS = {
