@@ -191,7 +191,7 @@ zkevm.da-url: ""
 zkevm.initial-batch.config: /etc/cdk-erigon/first-batch-config.json
 # {{end}}
 
-zkevm.initial-commitment: {{ .initial_commitment }}
+# zkevm.initial-commitment: {{ .initial_commitment }}
 
 # --------------------------------------------------------------------------------------------------
 #   ______  _________     ____  __           ____  ____   ____
