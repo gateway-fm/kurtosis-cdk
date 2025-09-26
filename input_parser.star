@@ -545,6 +545,7 @@ VALID_CONSENSUS_TYPES = [
     constants.CONSENSUS_TYPE.pessimistic,
     constants.CONSENSUS_TYPE.fep,
     constants.CONSENSUS_TYPE.ecdsa_multisig,
+    constants.CONSENSUS_TYPE.sovereign_fep,
 ]
 
 

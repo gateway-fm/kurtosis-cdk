@@ -29,6 +29,7 @@ CONSENSUS_TYPE = struct(
     pessimistic="pessimistic",
     ecdsa_multisig="ecdsa_multisig",
     fep="fep",
+    sovereign_fep="sovereign_fep",
 )
 
 SEQUENCER_TYPE = struct(
