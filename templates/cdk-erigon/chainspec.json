@@ -21,5 +21,6 @@
   "cancunTime": {{if .enable_normalcy}}0{{else}}9999999999999999999999999999999999999999999999999{{end}},
   "normalcyBlock": {{if .enable_normalcy}}0{{else}}9999999999999999999999999999999999999999999999999{{end}},
   "pragueTime": {{if .enable_normalcy}}0{{else}}9999999999999999999999999999999999999999999999999{{end}},
+  "disableZkevmStateChangesBlock": 0,
   "ethash": {}
 }
