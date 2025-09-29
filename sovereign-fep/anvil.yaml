@@ -1,0 +1,24 @@
+services:
+  # Anvil - Foundry's local Ethereum node with latest EIPs
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:v1.3.6
+    container_name: anvil-l1
+    network_mode: host
+    command: |
+      anvil
+      --host 0.0.0.0
+      --port 8545
+      --chain-id 1337
+      --accounts 10
+      --balance 10000
+      --gas-limit 30000000
+      --gas-price 1000000000
+      --block-time 1
+      --hardfork prague
+      --enable-tracing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545", "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

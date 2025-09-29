@@ -1,0 +1,12 @@
+{
+    "adminZkEVM": "0xEB722eCe6D7028cA72Ca98Cb324cc22Da83e1d20",
+    "chainID": 1001,
+    "consensusContract": "PolygonZkEVMEtrog",
+    "trustedSequencer": "0x0318A80977AcEF01302CA8911164d597cE5804a4",
+    "trustedAggregator": "0xB420ffDfBf6e54b8aB2B528Fbcf941246583b9B8",
+    "forkID": 12,
+    "realVerifier": false,
+    "trustedSequencerURL": "http://127.0.0.1:8123",
+    "networkName": "dynamic-network",
+    "description": "dynamic-network"
+}
