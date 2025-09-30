@@ -15,7 +15,7 @@
         "londonBlock": 0,
         "arrowGlacierBlock": 9999999999999999999999999999999999999999999999999,
         "grayGlacierBlock": 9999999999999999999999999999999999999999999999999,
-        "terminalTotalDifficulty": 0,
+        "terminalTotalDifficulty": 58750000000000000000000,
         "terminalTotalDifficultyPassed": false,
         "shanghaiTime": 0,
         "cancunTime": 0,
@@ -23,5 +23,6 @@
         "normalcyBlock": 0,
         "pmtEnabledBlock": 0,
         "disableZkevmStateChangesBlock": 0,
+        "debugDisableZkevmStateChanges": true,
         "ethash": {}
       }

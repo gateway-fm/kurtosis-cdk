@@ -4,15 +4,14 @@ services:
     image: ghcr.io/foundry-rs/foundry:v1.3.6
     container_name: anvil-fep
     network_mode: host
+    entrypoint: ["anvil"]
     command: |
-      anvil
       --host 0.0.0.0
       --port 8545
-      --fork-url https://rpc.eu-central-8.gateway.fm/v4/ethereum/non-archival/sepolia
+      --chain-id 1337
       --accounts 10
       --balance 10000
-      --block-time 2
-      --enable-tracing
+      --block-time 1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8545", "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}']
       interval: 10s

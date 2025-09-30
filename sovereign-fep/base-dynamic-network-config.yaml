@@ -6,7 +6,7 @@ zkevm.l2-chain-id: 1001
 zkevm.l1-rollup-id: 1
 zkevm.l2-sequencer-rpc-url: "http://34.175.214.161:18123"
 zkevm.l2-datastreamer-url: "34.175.214.161:16900"
-zkevm.l1-chain-id: 31337
+zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://localhost:8545
 zkevm.initial-batch.config: "first-batch-config.json"
 
