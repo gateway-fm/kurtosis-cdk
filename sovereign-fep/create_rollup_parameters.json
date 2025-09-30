@@ -1,12 +1,47 @@
 {
     "adminZkEVM": "0xEB722eCe6D7028cA72Ca98Cb324cc22Da83e1d20",
     "chainID": 1001,
-    "consensusContract": "PolygonZkEVMEtrog",
+    "consensusContract": "AggchainFEP",
+    "isVanillaClient": true,
     "trustedSequencer": "0x0318A80977AcEF01302CA8911164d597cE5804a4",
     "trustedAggregator": "0xB420ffDfBf6e54b8aB2B528Fbcf941246583b9B8",
-    "forkID": 12,
+    "forkID": 0,
     "realVerifier": false,
     "trustedSequencerURL": "http://127.0.0.1:8123",
     "networkName": "dynamic-network",
-    "description": "dynamic-network"
+    "description": "dynamic-network",
+    "programVKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "sovereignParams": {
+        "bridgeManager": "0x635243A11B41072264Df6c9186e3f473402F94e9",
+        "sovereignWETHAddress": "0x0000000000000000000000000000000000000000",
+        "sovereignWETHAddressIsNotMintable": false,
+        "globalExitRootUpdater": "0x635243A11B41072264Df6c9186e3f473402F94e9",
+        "globalExitRootRemover": "0x635243A11B41072264Df6c9186e3f473402F94e9",
+        "emergencyBridgePauser": "0x635243A11B41072264Df6c9186e3f473402F94e9",
+        "emergencyBridgeUnpauser": "0x635243A11B41072264Df6c9186e3f473402F94e9",
+        "proxiedTokensManager" : "0x635243A11B41072264Df6c9186e3f473402F94e9"
+    },
+    "aggchainParams": {
+        "aggchainManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "initParams": {
+            "l2BlockTime": "1750167810",
+            "rollupConfigHash": "0x5f16f4c7f149ac4f9510d9cf8cf384038ad348b3bcdc01915f95de12df9d1b02",
+            "startingOutputRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "startingBlockNumber": 1,
+            "startingTimestamp": 1750167810,
+            "submissionInterval": "1",
+            "optimisticModeManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "aggregationVkey": "0x1e82b1193be48c5c6ba14dda2bcc29ab4d3dc3a2379198ac1f8571040d0a7a4d",
+            "rangeVkeyCommitment": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "useDefaultVkeys": false,
+        "ownedAggchainVKey": "0x1e82b1193be48c5c6ba14dda2bcc29ab4d3dc3a2379198ac1f8571040d0a7a4d",
+        "aggchainVKeySelector": "0x00010001",
+        "initOwnedAggchainVKey": "0x1e82b1193be48c5c6ba14dda2bcc29ab4d3dc3a2379198ac1f8571040d0a7a4d",
+        "initAggchainVKeySelector": "0x00010001",
+        "vKeyManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "useDefaultSigners": false,
+        "signers": "0x0318A80977AcEF01302CA8911164d597cE5804a4",
+        "threshold": 1
+    }
 }

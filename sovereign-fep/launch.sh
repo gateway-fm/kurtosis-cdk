@@ -35,13 +35,14 @@ cast send --rpc-url "$l1_rpc_url" --private-key "$anvil_key" --value "100ether" 
 
 # launch the cdk contracts onto the L1
 if [ ! -d "agglayer-contracts" ]; then
-        git clone git@github.com:agglayer/agglayer-contracts.git
+    git clone git@github.com:agglayer/agglayer-contracts.git
 fi
+
 cp deploy_parameters.json agglayer-contracts/deployment/v2/deploy_parameters.json
 cp create_rollup_parameters.json agglayer-contracts/deployment/v2/create_rollup_parameters.json
 
 cd agglayer-contracts
-git checkout 2488a0812dd64f622b4890fee14c3b8938bb76df
+git checkout feature/v12
 npm i 
 npx hardhat compile
 
@@ -64,6 +65,10 @@ echo "[contracts] Step 4: Done"
 echo "[contracts] Step 5: Creating rollup"
 npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
 echo "[contracts] Step 5: Done"
+
+# move the create rollup output file into something more predictable
+create_rollup_file=$(ls deployment/v2/create_rollup_output_*)
+mv $(ls deployment/v2/create_rollup_output_*.json) deployment/v2/create_rollup_output.json
 
 # Deploy deterministic deployment proxy (for CREATE2 deployments)
 echo "[contracts] Step 6: Deploying deterministic deployment proxy"
@@ -135,11 +140,6 @@ cp base-dynamic-network-conf.json erigon-config/dynamic-network-conf.json
 root=$(jq -r '.genesis' ./agglayer-contracts/deployment/v2/create_rollup_output.json)
 sed -i '' "s/\"root\": .*/\"root\": \"$root\",/" erigon-config/dynamic-network-conf.json
 
-timestamp=$(jq -r '.firstBatchData.timestamp' ./agglayer-contracts/deployment/v2/create_rollup_output.json)
-sed -i '' "s/\"timestamp\": .*/\"timestamp\": $timestamp,/" erigon-config/dynamic-network-conf.json
-
-jq '.firstBatchData' ./agglayer-contracts/deployment/v2/create_rollup_output.json > erigon-config/first-batch-config.json
-
 cp base-dynamic-network-chainspec.json erigon-config/dynamic-network-chainspec.json
 
 # This is a jq script to transform the CDK-style genesis file into an allocs file for erigon
@@ -168,3 +168,8 @@ fi
 
 echo "[rollup] Step 1: Done"
 
+# create the data directory for cdk-erigon to use
+mkdir -p data
+
+# now start erigon up
+docker compose -f cdk-erigon.yaml up -d

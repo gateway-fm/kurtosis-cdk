@@ -12,6 +12,8 @@
     "salt": "0x0000000000000000000000000000000000000000000000000000000000000001",
     "timelockAdminAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "deployerPvtKey": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "ppVKey": "0x00199e4c35364a8ed49c9fac0f0940aa555ce166aafc1ccb24f57d245f9c962c",
+    "ppVKeySelector": "0x00000004",
     "trustedSequencer": "0x0318A80977AcEF01302CA8911164d597cE5804a4",
     "trustedAggregator": "0xB420ffDfBf6e54b8aB2B528Fbcf941246583b9B8",
     "forkID": 12,
