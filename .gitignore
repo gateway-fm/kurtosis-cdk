@@ -29,6 +29,10 @@ templates/contract-deploy/genesis.json
 anvil_state.json
 
 hack-allocs
-sovereign-fep/agglayer-contracts/
+sovereign-fep/zkevm-contracts/
 sovereign-fep/erigon-config/
 sovereign-fep/data/
+sovereign-fep/deploy_output.json
+sovereign-fep/create_new_rollup.json
+sovereign-fep/create_rollup_output.json
+sovereign-fep/create_rollup_parameters.json
