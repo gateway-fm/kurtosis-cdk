@@ -12,7 +12,7 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1019
+l2ChainId=1023
 vkeySelector="0x${l2ChainId}0001" 
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
@@ -187,7 +187,7 @@ root=$(jq -r '.genesis' create_rollup_output.json)
 sed -i '' "s/\"root\": .*/\"root\": \"$root\",/" erigon-config/dynamic-network-conf.json
 
 cp base-dynamic-network-chainspec.json erigon-config/dynamic-network-chainspec.json
-sed -i '' "s/chainId: .*/chainId: $l2ChainId,/" erigon-config/dynamic-network-chainspec.json
+sed -i '' "s/chainId\": .*/chainId\": $l2ChainId,/" erigon-config/dynamic-network-chainspec.json
 
 # This is a jq script to transform the CDK-style genesis file into an allocs file for erigon
 jq_script='

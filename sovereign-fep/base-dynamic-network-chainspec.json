@@ -1,6 +1,6 @@
 {
         "ChainName": "dynamic-network",
-        "chainId": 1001,
+        "chainId": 9999999999,
         "consensus": "ethash",
         "homesteadBlock": 0,
         "daoForkBlock": 0,
