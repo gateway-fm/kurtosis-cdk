@@ -10,8 +10,12 @@
 # `kurtosis run --enclave=cdk --args-file=./.github/tests/op-succinct/mock-prover.yml .`
 #
 #
-
 pwd=$(pwd)
+
+l2ChainId=1009
+vkeySelector="0x${l2ChainId}0001" 
+echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
+
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
 contracts_container=$(docker ps -a --filter "name=contracts-001" --format "{{.ID}}")
 docker cp $contracts_container:/opt/zkevm/deploy_output.json .
@@ -22,6 +26,10 @@ docker cp $contracts_container:/opt/contract-deploy/create_new_rollup.json .
 # just clone it ourselves and use it so taking it from the container seems the safest and easiest path right now.
 if [ ! -d "zkevm-contracts" ]; then
     docker cp $contracts_container:/opt/zkevm-contracts .
+    cd zkevm-contracts
+    npm i 
+    npx hardhat compile
+    cd $pwd
 fi
 
 mnemonic="test test test test test test test test test test test junk"
@@ -35,6 +43,7 @@ sequencer_address=0x0318A80977AcEF01302CA8911164d597cE5804a4
 cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "$sequencer_address"
 cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "$hardhat_address"
 
+
 # clone the rollup creation parameters from the originally deployed network and we can change the values
 # we care about and put it back before launcing the new rollup.
 adminZkEVM=$(jq -r '.admin' deploy_output.json)
@@ -43,7 +52,7 @@ jq '.trustedSequencerURL = "http://localhost:8124"' create_rollup_parameters.jso
 jq '.networkName = "sovereign-fep"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq '.description = "cdk-erigon sovereign fep"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".trustedSequencer = \"$sequencer_address\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq '.chainID = 1057' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".chainID = $l2ChainId" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".adminZkEVM = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq '.gasTokenAddress = ""' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".deployerPvtKey = \"$master_key\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -58,19 +67,19 @@ jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_r
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultSigners = true" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultVkeys = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initAggchainVKeySelector = \"0x22290001\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initAggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.signers = []" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 cp create_rollup_parameters.json zkevm-contracts/deployment/v2/create_rollup_parameters.json
 
 cd zkevm-contracts
-npm i 
-npx hardhat compile
 
 # make sure the l1 endpoint is pointing to kurtosis from hardhat
-sed -i '' "s#http://el-1-geth-lighthouse:8545#http://$l1_rpc_url#" hardhat.config.ts
+sed -i '' "s#http://el-1-geth-lighthouse:.*#http://$l1_rpc_url\',#" hardhat.config.ts
+sed -i '' "s#http://127.0.0.1:.*#http://$l1_rpc_url\',#" hardhat.config.ts
 
 echo "[contracts]: Creating genesis"
 MNEMONIC="$mnemonic" npx ts-node deployment/v2/1_createGenesis.ts 2>&1 | tee 04_create_genesis.out
+cp zkevm-contracts/deployment/v2/genesis.json genesis.json
 echo "[contracts]: Done\n"
 
 echo "[contracts]: Creating rollup"
@@ -109,7 +118,7 @@ mkdir -p erigon-config
 cp base-dynamic-network-config.yaml erigon-config/dynamic-network-config.yaml
 
 sed -i '' "s#zkevm.l1-rpc-url: .*#zkevm.l1-rpc-url: http://$l1_rpc_url#" erigon-config/dynamic-network-config.yaml
-
+sed -i '' "s/zkevm.l2-chain-id: .*/zkevm.l2-chain-id: $l2ChainId/" erigon-config/dynamic-network-config.yaml
 sed -i '' "s/zkevm.address-sequencer: .*/zkevm.address-sequencer: $sequencer_address/" erigon-config/dynamic-network-config.yaml
 
 address_zkevm=$(jq -r '.rollupAddress' create_rollup_output.json)
@@ -127,6 +136,7 @@ root=$(jq -r '.genesis' create_rollup_output.json)
 sed -i '' "s/\"root\": .*/\"root\": \"$root\",/" erigon-config/dynamic-network-conf.json
 
 cp base-dynamic-network-chainspec.json erigon-config/dynamic-network-chainspec.json
+sed -i '' "s/chainId: .*/chainId: $l2ChainId,/" erigon-config/dynamic-network-chainspec.json
 
 # This is a jq script to transform the CDK-style genesis file into an allocs file for erigon
 jq_script='
@@ -159,3 +169,35 @@ mkdir -p data
 
 # now start erigon up
 docker compose -f cdk-erigon.yaml up -d
+
+# now start aggkit up
+aggLayerGrpcUrl=$(kurtosis port print cdk agglayer aglr-grpc)
+aggLayerReadRpcUrl=$(kurtosis port print cdk agglayer aglr-readrpc)
+aggLayerProverGrpcUrl=$(echo "$(kurtosis port print cdk agglayer-prover api)" | sed 's#grpc://##')
+bridgeAddress=$(jq -r '.polygonZkEVMBridgeAddress' deploy_output.json)
+deploymentBlockNumber=$(jq -r '.deploymentRollupManagerBlockNumber' deploy_output.json)
+globalExitRootAddress=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
+rollupManagerAddress=$(jq -r '.polygonRollupManagerAddress' deploy_output.json)
+rollupAddress=$(jq -r '.rollupAddress' create_rollup_output.json)
+l2GerContractAddress=$(jq -r '.genesis[] | select(.contractName == "PolygonZkEVMGlobalExitRootL2 proxy") | .address' genesis.json)
+claimSenderAddress="0x635243A11B41072264Df6c9186e3f473402F94e9"
+
+cp templates/aggkit-cdk-config.toml aggkit-config.toml
+
+sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" aggkit-config.toml
+sed -i '' "s#{{agglayer_grpc_url}}#$aggLayerGrpcUrl#g" aggkit-config.toml
+sed -i '' "s#{{agglayer_readrpc_url}}#$aggLayerReadRpcUrl#g" aggkit-config.toml
+sed -i '' "s#{{agglayer_prover_grpc}}#$aggLayerProverGrpcUrl#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_bridge_address}}#$bridgeAddress#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_rollup_manager_block_number}}#$deploymentBlockNumber#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_global_exit_root_address}}#$globalExitRootAddress#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_rollup_manager_address}}#$rollupManagerAddress#g" aggkit-config.toml
+sed -i '' "s#{{pol_token_address}}#$pol_token#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_rollup_address}}#$rollupAddress#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_global_exit_root_l2_address}}#$l2GerContractAddress#g" aggkit-config.toml
+sed -i '' "s#{{zkevm_l2_claimsponsor_address}}#$claimSenderAddress#g" aggkit-config.toml
+sed -i '' "s#{{l2_chain_id}}#$l2ChainId#g" aggkit-config.toml
+
+mkdir -p aggkit-oracle
+cp aggkit-config.toml aggkit-oracle/config.toml
+cast wallet import --keystore-dir aggkit-oracle --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" aggoracle.keystore

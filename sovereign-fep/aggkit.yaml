@@ -1,0 +1,8 @@
+services:
+  agg-oracle:
+    image: ghcr.io/agglayer/aggkit:0.7.0-beta6
+    container_name: agg-oracle
+    network_mode: host
+    volumes:
+      - ./aggkit-oracle:/etc/aggkit
+    command: ["run", "--cfg", "/etc/aggkit/config.toml", "--components", "aggoracle"]
