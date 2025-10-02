@@ -12,7 +12,7 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1009
+l2ChainId=1019
 vkeySelector="0x${l2ChainId}0001" 
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
@@ -32,10 +32,31 @@ if [ ! -d "zkevm-contracts" ]; then
     cd $pwd
 fi
 
+if [ ! -d "lxly-bridge-and-call" ]; then
+    git clone --recursive https://github.com/AggLayer/lxly-bridge-and-call
+fi
+
+adminZkEVM=$(jq -r '.admin' deploy_output.json)
+pol_token=$(jq -r '.polTokenAddress' deploy_output.json)
+address_ger=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
+bridgeAddress=$(jq -r '.polygonZkEVMBridgeAddress' deploy_output.json)
+deploymentBlockNumber=$(jq -r '.deploymentRollupManagerBlockNumber' deploy_output.json)
+globalExitRootAddress=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
+rollupManagerAddress=$(jq -r '.polygonRollupManagerAddress' deploy_output.json)
+
+echo "adminZkEVM: $adminZkEVM"
+echo "pol_token: $pol_token"
+echo "address_ger: $address_ger"
+echo "bridgeAddress: $bridgeAddress"
+echo "deploymentBlockNumber: $deploymentBlockNumber"
+echo "globalExitRootAddress: $globalExitRootAddress"
+echo "rollupManagerAddress: $rollupManagerAddress"
+
 mnemonic="test test test test test test test test test test test junk"
 hardhat_key=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 # from mnemonic above - used by contracts repo
 hardhat_address=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 master_key="0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625"
+master_address=0xE34aaF64b29273B7D567FCFc40544c014EEe9970
 sequencer_key=0xd828fe23d9d8e92aa1c92ad2b7e172a9c35608d42d114068abd7bb2da98c38cd
 sequencer_address=0x0318A80977AcEF01302CA8911164d597cE5804a4
 
@@ -46,7 +67,6 @@ cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "
 
 # clone the rollup creation parameters from the originally deployed network and we can change the values
 # we care about and put it back before launcing the new rollup.
-adminZkEVM=$(jq -r '.admin' deploy_output.json)
 cp zkevm-contracts/deployment/v2/create_rollup_parameters.json.example ./create_rollup_parameters.json
 jq '.trustedSequencerURL = "http://localhost:8124"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq '.networkName = "sovereign-fep"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -71,27 +91,60 @@ jq ".aggchainParams.initAggchainVKeySelector = \"$vkeySelector\"" create_rollup_
 jq ".aggchainParams.signers = []" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 cp create_rollup_parameters.json zkevm-contracts/deployment/v2/create_rollup_parameters.json
 
+# clear out any previous genesis file creations
+pushd zkevm-contracts/tools/createSovereignGenesis
+rm -rf genesis-rollupID*
+rm -rf output-rollupID*
+popd
+
+cp ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sovereign-params.json.example create.json
+
+# get the rollup count and add one to it for our new rollup
+rollupCount=$(cast call -r $l1_rpc_url $rollupManagerAddress "rollupCount()")
+rollupCount=$((rollupCount + 1))
+
+# change the values we need to and build our gensis file up
+jq ".rollupManagerAddress = \"$rollupManagerAddress\"" create.json > temp.json; mv temp.json create.json
+jq ".chainID = \"$l2ChainId\"" create.json > temp.json; mv temp.json create.json
+jq ".rollupID = \"2\"" create.json > temp.json; mv temp.json create.json
+jq ".bridgeManager = \"$bridgeAddress\"" create.json > temp.json; mv temp.json create.json
+jq ".globalExitRootUpdater = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".globalExitRootRemover = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".emergencyBridgePauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".emergencyBridgeUnpauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".proxiedTokensManager = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".preMintAccounts = [{\"balance\": \"1000000000000000000\", \"address\": \"$master_address\"},{\"balance\": \"1000000000000000000\", \"address\": \"0xe859276098f208D003ca6904C6cC26629Ee364Ce\"}]" create.json > temp.json; mv temp.json create.json
+jq ".timelockParameters.adminAddress = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".useAggOracleCommittee = false" create.json > temp.json; mv temp.json create.json
+jq ".aggOracleOwner = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq "del(.formatGenesis)" create.json > temp.json; mv temp.json create.json
+
+cp create.json ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sovereign-params.json
+
 cd zkevm-contracts
 
 # make sure the l1 endpoint is pointing to kurtosis from hardhat
 sed -i '' "s#http://el-1-geth-lighthouse:.*#http://$l1_rpc_url\',#" hardhat.config.ts
 sed -i '' "s#http://127.0.0.1:.*#http://$l1_rpc_url\',#" hardhat.config.ts
 
-echo "[contracts]: Creating genesis"
-MNEMONIC="$mnemonic" npx ts-node deployment/v2/1_createGenesis.ts 2>&1 | tee 04_create_genesis.out
-cp zkevm-contracts/deployment/v2/genesis.json genesis.json
+echo "[contracts]: Creating rollup"
+export DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625
+npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
+# move the create rollup output file into something more predictable
 echo "[contracts]: Done\n"
 
-echo "[contracts]: Creating rollup"
-DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625 npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
-# move the create rollup output file into something more predictable
+echo "[contracts]: Creating genesis"
+# quickly get how many rollups there are so we can use this in the genesis input file
+npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --network localhost 2>&1 | tee 04_create_genesis.out
+echo "[contracts]: Done\n"
+
+# copy the created rollup and genesis file from the zkevm folder to where we can work with them easily
 cd $pwd
 mv $(ls zkevm-contracts/deployment/v2/create_rollup_output_*.json) create_rollup_output.json
-echo "[contracts]: Done\n"
+mv $(ls zkevm-contracts/tools/createSovereignGenesis/genesis-rollupID*.json) genesis.json
 
 echo "[contracts]: Minting POL tokens for sequencer and adding approval for rollup"
 # Mint POL tokens for sequencer
-pol_token=$(jq -r '.polTokenAddress' deploy_output.json)
 cast send \
     --private-key "$sequencer_key" \
     --rpc-url "$l1_rpc_url" \
@@ -124,10 +177,8 @@ sed -i '' "s/zkevm.address-sequencer: .*/zkevm.address-sequencer: $sequencer_add
 address_zkevm=$(jq -r '.rollupAddress' create_rollup_output.json)
 sed -i '' "s/zkevm.address-zkevm: .*/zkevm.address-zkevm: $address_zkevm/" erigon-config/dynamic-network-config.yaml
 
-address_rollup=$(jq -r '.polygonRollupManagerAddress' deploy_output.json)
-sed -i '' "s/zkevm.address-rollup: .*/zkevm.address-rollup: $address_rollup/" erigon-config/dynamic-network-config.yaml
+sed -i '' "s/zkevm.address-rollup: .*/zkevm.address-rollup: $rollupManagerAddress/" erigon-config/dynamic-network-config.yaml
 
-address_ger=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
 sed -i '' "s/zkevm.address-ger-manager: .*/zkevm.address-ger-manager: $address_ger/" erigon-config/dynamic-network-config.yaml
 
 # conf file
@@ -151,7 +202,7 @@ jq_script='
 }) | add'
 
 # Use jq to transform the input JSON into the desired format
-if ! output_json=$(jq "$jq_script" ./zkevm-contracts/deployment/v2/genesis.json); then
+if ! output_json=$(jq "$jq_script" genesis.json); then
     echo_ts "Error processing JSON with jq"
     exit 1
 fi
@@ -164,22 +215,58 @@ fi
 
 echo "[rollup] Step 1: Done\n"
 
-# create the data directory for cdk-erigon to use
-mkdir -p data
-
 # now start erigon up
 docker compose -f cdk-erigon.yaml up -d
+
+# wait for the l2 to start then launc the deterministic deployment proxy
+until cast send --rpc-url "http://localhost:8123" --private-key "$master_key" --value "0.001ether" "$sequencer_address" &> /dev/null; do
+    echo "Waiting for L2 to start..."
+    sleep 2
+done
+
+echo "Launching deterministic deployment proxy"
+signer_address="0x3fab184622dc19b6109349b94811493bf2a45362"
+gas_cost="0.01ether"
+transaction="0xf8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222"
+deployer_address="0x4e59b44847b379578588920ca78fbf26c0b4956c"
+eth_address="$(cast wallet address --private-key "$master_key")"
+account_nonce="$(cast nonce --rpc-url "http://localhost:8123" "$eth_address")"
+cast send \
+    --rpc-url "http://localhost:8123" \
+    --private-key "$master_key" \
+    --value "$gas_cost" \
+    --nonce "$account_nonce" \
+    "$signer_address"
+cast publish --rpc-url "http://localhost:8123" "$transaction"
+if [[ $(cast code --rpc-url "http://localhost:8123" $deployer_address) == "0x" ]]; then
+    echo_ts "No code at expected l2 address: $deployer_address"
+    exit 1;
+fi
+echo "Deterministic deployment proxy launched"
+
+export ADDRESS_PROXY_ADMIN=0x242daE44F5d8fb54B198D03a94dA45B5a4413e21
+export ADDRESS_LXLY_BRIDGE=0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe
+export DEPLOYER_PRIVATE_KEY="$master_key"
+
+echo "Running bridge deploy and call on L1"
+cd lxly-bridge-and-call
+forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "$l1_rpc_url" --legacy --broadcast
+cd $pwd
+echo "Done bridge deploy and call on L1"
+
+echo "Running bridge deploy and call on L2"
+cd lxly-bridge-and-call
+forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "http://localhost:8123" --legacy --broadcast
+cd $pwd
+echo "Done bridge deploy and call on L2"
+
 
 # now start aggkit up
 aggLayerGrpcUrl=$(kurtosis port print cdk agglayer aglr-grpc)
 aggLayerReadRpcUrl=$(kurtosis port print cdk agglayer aglr-readrpc)
 aggLayerProverGrpcUrl=$(echo "$(kurtosis port print cdk agglayer-prover api)" | sed 's#grpc://##')
-bridgeAddress=$(jq -r '.polygonZkEVMBridgeAddress' deploy_output.json)
-deploymentBlockNumber=$(jq -r '.deploymentRollupManagerBlockNumber' deploy_output.json)
-globalExitRootAddress=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
-rollupManagerAddress=$(jq -r '.polygonRollupManagerAddress' deploy_output.json)
 rollupAddress=$(jq -r '.rollupAddress' create_rollup_output.json)
-l2GerContractAddress=$(jq -r '.genesis[] | select(.contractName == "PolygonZkEVMGlobalExitRootL2 proxy") | .address' genesis.json)
+l2GerContractAddress=$(jq -r '.genesis[] | select(.contractName == "GlobalExitRootManagerL2SovereignChain proxy") | .address' genesis.json)
 claimSenderAddress="0x635243A11B41072264Df6c9186e3f473402F94e9"
 
 cp templates/aggkit-cdk-config.toml aggkit-config.toml

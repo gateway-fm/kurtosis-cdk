@@ -50,3 +50,4 @@ zkevm.data-stream-writeTimeout: "20s"
 zkevm.l1-contract-address-check: true
 zkevm.reject-low-gas-price-transactions: false
 p2p.allowed-ports: "30603,30604,30605,30606"
+zkevm.allow-pre-eip155-transactions: true

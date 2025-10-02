@@ -39,3 +39,5 @@ sovereign-fep/create_rollup_parameters.json
 sovereign-fep/aggkit-oracle/
 sovereign-fep/aggkit-config.toml
 sovereign-fep/genesis.json
+sovereign-fep/create.json
+sovereign-fep/lxly-bridge-and-call/
