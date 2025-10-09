@@ -12,8 +12,8 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1023
-vkeySelector="0x${l2ChainId}0001" 
+l2ChainId=1001
+vkeySelector="0x${l2ChainId}0001"
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
@@ -85,10 +85,13 @@ jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_param
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.useDefaultSigners = true" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultVkeys = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initAggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.signers = []" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.aggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initOwnedAggchainVKey = \"0x1111111111111111111111111111111111111111111111111111111111111111\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.ownedAggchainVKey = \"0x1111111111111111111111111111111111111111111111111111111111111111\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.signers = [[\"$sequencer_address\", \" \"]]" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 cp create_rollup_parameters.json zkevm-contracts/deployment/v2/create_rollup_parameters.json
 
 # clear out any previous genesis file creations
@@ -98,10 +101,6 @@ rm -rf output-rollupID*
 popd
 
 cp ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sovereign-params.json.example create.json
-
-# get the rollup count and add one to it for our new rollup
-rollupCount=$(cast call -r $l1_rpc_url $rollupManagerAddress "rollupCount()")
-rollupCount=$((rollupCount + 1))
 
 # change the values we need to and build our gensis file up
 jq ".rollupManagerAddress = \"$rollupManagerAddress\"" create.json > temp.json; mv temp.json create.json
@@ -260,19 +259,27 @@ forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "http://localhost:81
 cd $pwd
 echo "Done bridge deploy and call on L2"
 
+echo "Adding signer to the AggchainFEP contract"
+cast send -r $l1_rpc_url --private-key $master_key $address_zkevm "updateSignersAndThreshold((address,uint256)[],(address,string)[],uint256)" "[]" "[($sequencer_address,' ')]" "1"
+echo "Done adding signer to the AggchainFEP contract"
+
 
 # now start aggkit up
 aggLayerGrpcUrl=$(kurtosis port print cdk agglayer aglr-grpc)
+agglayerGrpcAsHttpUrl=$(echo $aggLayerGrpcUrl | sed 's#grpc#http#')
 aggLayerReadRpcUrl=$(kurtosis port print cdk agglayer aglr-readrpc)
-aggLayerProverGrpcUrl=$(echo "$(kurtosis port print cdk agglayer-prover api)" | sed 's#grpc://##')
+aggLayerProverGrpcUrl=$(echo "$(kurtosis port print cdk aggkit-prover-001 grpc)" | sed 's#grpc://##')
+aggLayerProverGrpcUrl="http://localhost:4446" # running on localhost - not using the kurtosis version
 rollupAddress=$(jq -r '.rollupAddress' create_rollup_output.json)
 l2GerContractAddress=$(jq -r '.genesis[] | select(.contractName == "GlobalExitRootManagerL2SovereignChain proxy") | .address' genesis.json)
 claimSenderAddress="0x635243A11B41072264Df6c9186e3f473402F94e9"
+proposerUrl=$(kurtosis port print cdk op-succinct-proposer-001 grpc)
+proposerUrlAsHttp=$(echo $proposerUrl | sed 's#grpc#http#')
 
 cp templates/aggkit-cdk-config.toml aggkit-config.toml
-
 sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" aggkit-config.toml
 sed -i '' "s#{{agglayer_grpc_url}}#$aggLayerGrpcUrl#g" aggkit-config.toml
+sed -i '' "s#{{agglayer_grpc_as_http_url}}#$agglayerGrpcAsHttpUrl#g" aggkit-config.toml
 sed -i '' "s#{{agglayer_readrpc_url}}#$aggLayerReadRpcUrl#g" aggkit-config.toml
 sed -i '' "s#{{agglayer_prover_grpc}}#$aggLayerProverGrpcUrl#g" aggkit-config.toml
 sed -i '' "s#{{zkevm_bridge_address}}#$bridgeAddress#g" aggkit-config.toml
@@ -285,6 +292,63 @@ sed -i '' "s#{{zkevm_global_exit_root_l2_address}}#$l2GerContractAddress#g" aggk
 sed -i '' "s#{{zkevm_l2_claimsponsor_address}}#$claimSenderAddress#g" aggkit-config.toml
 sed -i '' "s#{{l2_chain_id}}#$l2ChainId#g" aggkit-config.toml
 
+cp templates/bridge-config.toml zkevm-bridge-config.toml
+sed -i '' "s#{{global_log_level}}#info#g" zkevm-bridge-config.toml
+sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" zkevm-bridge-config.toml
+sed -i '' "s#{{l2_rpc_url}}#http://localhost:8123#g" zkevm-bridge-config.toml
+sed -i '' "s#{{grpc_port_number}}#9090#g" zkevm-bridge-config.toml
+sed -i '' "s#{{rpc_port_number}}#8080#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_rollup_manager_block_number}}#$deploymentBlockNumber#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_bridge_address}}#$bridgeAddress#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_global_exit_root_address}}#$globalExitRootAddress#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_rollup_manager_address}}#$rollupManagerAddress#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_rollup_address}}#$rollupAddress#g" zkevm-bridge-config.toml
+sed -i '' "s#{{zkevm_global_exit_root_l2_address}}#$l2GerContractAddress#g" zkevm-bridge-config.toml
+
+cp templates/aggkit-prover-config.toml aggkit-prover-config.toml
+sed -i '' "s#{{aggkit_prover_grpc_port}}#4446#g" aggkit-prover-config.toml
+sed -i '' "s#{{log_level}}#info#g" aggkit-prover-config.toml
+sed -i '' "s#{{metrics_port}}#9093#g" aggkit-prover-config.toml
+sed -i '' "s#{{network_id}}#1#g" aggkit-prover-config.toml
+sed -i '' "s#{{primary_prover}}#mock-prover#g" aggkit-prover-config.toml
+sed -i '' "s#{{l1_rpc_url}}#http://$l1_rpc_url#g" aggkit-prover-config.toml
+sed -i '' "s#{{l2_el_rpc_url}}#http://localhost:8123#g" aggkit-prover-config.toml
+sed -i '' "s#{{l2_cl_rpc_url}}#http://localhost:8123#g" aggkit-prover-config.toml
+sed -i '' "s#{{rollup_manager_address}}#$rollupManagerAddress#g" aggkit-prover-config.toml
+sed -i '' "s#{{global_exit_root_address}}#$l2GerContractAddress#g" aggkit-prover-config.toml
+sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
+sed -i '' "s#{{proposer_url}}#$proposerUrlAsHttp#g" aggkit-prover-config.toml
+sed -i '' "s#{{agglayer_prover_network_url}}#https://rpc.production.succinct.xyz#g" aggkit-prover-config.toml
+
 mkdir -p aggkit-oracle
-cp aggkit-config.toml aggkit-oracle/config.toml
+mkdir -p aggkit-bridge
+mkdir -p zkevm-bridge
+mkdir -p aggkit-sender
+mkdir -p aggkit-prover
+
 cast wallet import --keystore-dir aggkit-oracle --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" aggoracle.keystore
+cast wallet import --keystore-dir aggkit-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" bridge.keystore
+cast wallet import --keystore-dir aggkit-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" claimsponsor.keystore
+cast wallet import --keystore-dir aggkit-sender --private-key $sequencer_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" sequencer.keystore
+cast wallet import --keystore-dir zkevm-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" claimtxmanager.keystore
+
+cp aggkit-config.toml aggkit-oracle/config.toml
+docker compose -f aggkit.yaml up agg-oracle -d
+
+cp aggkit-config.toml aggkit-bridge/config.toml
+docker compose -f aggkit.yaml up agg-bridge -d
+
+cp zkevm-bridge-config.toml zkevm-bridge/zkevm-bridge-config.toml
+docker compose -f zkevm.yaml up zkevm-postgres -d
+# wait for postgres to be available
+until nc -z "127.0.0.1" "5432"; do
+  echo "Waiting for PostgreSQL on 127.0.0.1:5432..."
+  sleep 2
+done
+docker compose -f zkevm.yaml up zkevm-bridge -d
+
+cp aggkit-prover-config.toml aggkit-prover/config.toml
+docker compose -f aggkit.yaml up agg-prover -d
+
+cp aggkit-config.toml aggkit-sender/config.toml
+docker compose -f aggkit.yaml up agg-sender -d

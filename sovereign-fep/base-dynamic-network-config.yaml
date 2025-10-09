@@ -27,8 +27,8 @@ zkevm.witness-full: false
 zkevm.executor-strict: false
 zkevm.disable-virtual-counters: true
 
-zkevm.sequencer-block-seal-time: 2s
-zkevm.sequencer-empty-block-seal-time: 6s
+zkevm.sequencer-block-seal-time: 1s
+zkevm.sequencer-empty-block-seal-time: 1s
 zkevm.sequencer-batch-seal-time: 16s
 zkevm.sequencer-timeout-on-empty-tx-pool: 5ms
 

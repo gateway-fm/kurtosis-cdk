@@ -6,3 +6,28 @@ services:
     volumes:
       - ./aggkit-oracle:/etc/aggkit
     command: ["run", "--cfg", "/etc/aggkit/config.toml", "--components", "aggoracle"]
+  agg-bridge:
+    image: ghcr.io/agglayer/aggkit:0.7.0-beta6
+    container_name: agg-bridge
+    network_mode: host
+    volumes:
+      - ./aggkit-bridge:/etc/aggkit
+    command: ["run", "--cfg", "/etc/aggkit/config.toml", "--components", "bridge"]
+  agg-sender:
+    image: ghcr.io/agglayer/aggkit:0.7.0-beta6
+    container_name: agg-sender
+    network_mode: host
+    volumes:
+      - ./aggkit-sender:/etc/aggkit
+    command: ["run", "--cfg", "/etc/aggkit/config.toml", "--components", "aggsender"]
+  agg-prover:
+    image: aggkit-prover
+    container_name: agg-prover
+    network_mode: host
+    volumes:
+      - ./aggkit-prover:/etc/aggkit
+    environment:
+      - L2_OUTPUT_AT_BLOCK_ENDPOINT=eth_getBlockByNumber
+    entrypoint: ["/usr/local/bin/aggkit-prover"]
+    command: ["run", "--config-path", "/etc/aggkit/config.toml"]
+  

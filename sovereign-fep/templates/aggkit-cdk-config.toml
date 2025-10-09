@@ -15,7 +15,7 @@ PathRWData = "/tmp"
 L1URL = "http://{{l1_rpc_url}}"
 L2URL = "http://localhost:8123"
 
-AggLayerURL = "{{agglayer_readrpc_url}}"
+AggLayerURL = "{{agglayer_grpc_as_http_url}}"
 
 AggchainProofURL= "{{agglayer_prover_grpc}}"
 
@@ -253,7 +253,7 @@ Cached = true
 TTL = "15m"
 Capacity = 100
 [AggSender.AgglayerClient.GRPC]
-URL = "{{agglayer_readrpc_url}}"
+URL = "{{agglayer_grpc_as_http_url}}"
 MinConnectTimeout = "5s"
 RequestTimeout = "300s"
 UseTLS = false
@@ -470,7 +470,7 @@ BridgeAddr = "{{zkevm_bridge_address}}"
 # LatestBlock, SafeBlock, PendingBlock, FinalizedBlock, EarliestBlock
 # Default value is "LatestBlock"
 # ------------------------------------------------------------------------------
-BlockFinality = "FinalizedBlock"
+BlockFinality = "LatestBlock"
 
 # ------------------------------------------------------------------------------
 # First block that will be queried when starting the synchronization from scratch.
@@ -628,7 +628,7 @@ ProfilingHost = "0.0.0.0"
 # ProfilingPort is the port to bind the profiling server
 # Default: 6060
 # ------------------------------------------------------------------------------
-ProfilingPort = 6061
+ProfilingPort = 6062
 
 # ------------------------------------------------------------------------------
 # ProfilingEnabled is the flag to enable/disable the profiling server

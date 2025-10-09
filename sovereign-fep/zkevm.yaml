@@ -1,0 +1,27 @@
+services:
+  zkevm-postgres:
+    image: postgres:16.2
+    container_name: zkevm-postgres
+    network_mode: host
+    volumes:
+      - ./zkevm-postgres/data:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_USER: master_user
+      POSTGRES_PASSWORD: master_password
+      POSTGRES_DB: master
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  zkevm-bridge:
+    depends_on:
+      - zkevm-postgres
+    image: ghcr.io/0xpolygon/zkevm-bridge-service:v0.6.2-RC3
+    container_name: zkevm-bridge
+    network_mode: host
+    volumes:
+      - ./zkevm-bridge:/etc/zkevm
+    entrypoint: ["/app/zkevm-bridge"]
+    command: ["run", "--cfg", "/etc/zkevm/zkevm-bridge-config.toml"]
