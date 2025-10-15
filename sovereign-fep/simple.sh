@@ -68,7 +68,7 @@ cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "
 # clone the rollup creation parameters from the originally deployed network and we can change the values
 # we care about and put it back before launcing the new rollup.
 cp zkevm-contracts/deployment/v2/create_rollup_parameters.json.example ./create_rollup_parameters.json
-jq '.trustedSequencerURL = "http://localhost:8124"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq '.trustedSequencerURL = "http://127.0.0.1:8124"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq '.networkName = "sovereign-fep"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq '.description = "cdk-erigon sovereign fep"' create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".trustedSequencer = \"$sequencer_address\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -202,13 +202,13 @@ jq_script='
 
 # Use jq to transform the input JSON into the desired format
 if ! output_json=$(jq "$jq_script" genesis.json); then
-    echo_ts "Error processing JSON with jq"
+    echo "Error processing JSON with jq"
     exit 1
 fi
 
 # Write the output JSON to a file
 if ! echo "$output_json" | jq . > "erigon-config/dynamic-network-allocs.json"; then
-    echo_ts "Error writing to file erigon-config/dynamic-network-allocs.json"
+    echo "Error writing to file erigon-config/dynamic-network-allocs.json"
     exit 1
 fi
 
@@ -218,7 +218,7 @@ echo "[rollup] Step 1: Done\n"
 docker compose -f cdk-erigon.yaml up -d
 
 # wait for the l2 to start then launc the deterministic deployment proxy
-until cast send --rpc-url "http://localhost:8123" --private-key "$master_key" --value "0.001ether" "$sequencer_address" &> /dev/null; do
+until cast send --rpc-url "http://127.0.0.1:8123" --private-key "$master_key" --value "0.001ether" "$sequencer_address" &> /dev/null; do
     echo "Waiting for L2 to start..."
     sleep 2
 done
@@ -229,15 +229,15 @@ gas_cost="0.01ether"
 transaction="0xf8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222"
 deployer_address="0x4e59b44847b379578588920ca78fbf26c0b4956c"
 eth_address="$(cast wallet address --private-key "$master_key")"
-account_nonce="$(cast nonce --rpc-url "http://localhost:8123" "$eth_address")"
+account_nonce="$(cast nonce --rpc-url "http://127.0.0.1:8123" "$eth_address")"
 cast send \
-    --rpc-url "http://localhost:8123" \
+    --rpc-url "http://127.0.0.1:8123" \
     --private-key "$master_key" \
     --value "$gas_cost" \
     --nonce "$account_nonce" \
     "$signer_address"
-cast publish --rpc-url "http://localhost:8123" "$transaction"
-if [[ $(cast code --rpc-url "http://localhost:8123" $deployer_address) == "0x" ]]; then
+cast publish --rpc-url "http://127.0.0.1:8123" "$transaction"
+if [[ $(cast code --rpc-url "http://127.0.0.1:8123" $deployer_address) == "0x" ]]; then
     echo_ts "No code at expected l2 address: $deployer_address"
     exit 1;
 fi
@@ -255,7 +255,7 @@ echo "Done bridge deploy and call on L1"
 
 echo "Running bridge deploy and call on L2"
 cd lxly-bridge-and-call
-forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "http://localhost:8123" --legacy --broadcast
+forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "http://127.0.0.1:8123" --legacy --broadcast
 cd $pwd
 echo "Done bridge deploy and call on L2"
 
@@ -269,7 +269,7 @@ aggLayerGrpcUrl=$(kurtosis port print cdk agglayer aglr-grpc)
 agglayerGrpcAsHttpUrl=$(echo $aggLayerGrpcUrl | sed 's#grpc#http#')
 aggLayerReadRpcUrl=$(kurtosis port print cdk agglayer aglr-readrpc)
 aggLayerProverGrpcUrl=$(echo "$(kurtosis port print cdk aggkit-prover-001 grpc)" | sed 's#grpc://##')
-aggLayerProverGrpcUrl="http://localhost:4446" # running on localhost - not using the kurtosis version
+aggLayerProverGrpcUrl="http://127.0.0.1:4446" # running on localhost - not using the kurtosis version
 rollupAddress=$(jq -r '.rollupAddress' create_rollup_output.json)
 l2GerContractAddress=$(jq -r '.genesis[] | select(.contractName == "GlobalExitRootManagerL2SovereignChain proxy") | .address' genesis.json)
 claimSenderAddress="0x635243A11B41072264Df6c9186e3f473402F94e9"
@@ -295,7 +295,7 @@ sed -i '' "s#{{l2_chain_id}}#$l2ChainId#g" aggkit-config.toml
 cp templates/bridge-config.toml zkevm-bridge-config.toml
 sed -i '' "s#{{global_log_level}}#info#g" zkevm-bridge-config.toml
 sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" zkevm-bridge-config.toml
-sed -i '' "s#{{l2_rpc_url}}#http://localhost:8123#g" zkevm-bridge-config.toml
+sed -i '' "s#{{l2_rpc_url}}#http://127.0.0.1:8123#g" zkevm-bridge-config.toml
 sed -i '' "s#{{grpc_port_number}}#9090#g" zkevm-bridge-config.toml
 sed -i '' "s#{{rpc_port_number}}#8080#g" zkevm-bridge-config.toml
 sed -i '' "s#{{zkevm_rollup_manager_block_number}}#$deploymentBlockNumber#g" zkevm-bridge-config.toml
@@ -312,8 +312,8 @@ sed -i '' "s#{{metrics_port}}#9093#g" aggkit-prover-config.toml
 sed -i '' "s#{{network_id}}#1#g" aggkit-prover-config.toml
 sed -i '' "s#{{primary_prover}}#mock-prover#g" aggkit-prover-config.toml
 sed -i '' "s#{{l1_rpc_url}}#http://$l1_rpc_url#g" aggkit-prover-config.toml
-sed -i '' "s#{{l2_el_rpc_url}}#http://localhost:8123#g" aggkit-prover-config.toml
-sed -i '' "s#{{l2_cl_rpc_url}}#http://localhost:8123#g" aggkit-prover-config.toml
+sed -i '' "s#{{l2_el_rpc_url}}#http://127.0.0.1:8123#g" aggkit-prover-config.toml
+sed -i '' "s#{{l2_cl_rpc_url}}#http://127.0.0.1:8123#g" aggkit-prover-config.toml
 sed -i '' "s#{{rollup_manager_address}}#$rollupManagerAddress#g" aggkit-prover-config.toml
 sed -i '' "s#{{global_exit_root_address}}#$l2GerContractAddress#g" aggkit-prover-config.toml
 sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
