@@ -35,6 +35,7 @@ sovereign-fep/data/
 sovereign-fep/deploy_output.json
 sovereign-fep/create_new_rollup.json
 sovereign-fep/create_rollup_output.json
+sovereign-fep/evm-sketch-genesis.json
 sovereign-fep/create_rollup_parameters.json
 sovereign-fep/aggkit-oracle/
 sovereign-fep/aggkit-config.toml

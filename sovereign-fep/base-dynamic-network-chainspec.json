@@ -24,5 +24,6 @@
         "pmtEnabledBlock": 0,
         "disableZkevmStateChangesBlock": 0,
         "debugDisableZkevmStateChanges": true,
+        "sovereignMode": true,
         "ethash": {}
       }

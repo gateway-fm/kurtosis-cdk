@@ -8,3 +8,4 @@ rm -rf aggkit-oracle
 rm -rf aggkit-bridge
 rm -rf aggkit-sender
 rm -rf zkevm-bridge
+rm -rf aggkit-prover

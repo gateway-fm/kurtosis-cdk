@@ -1,0 +1,32 @@
+{
+  "config": {
+    "chainId": {{zkevm_rollup_chain_id}},
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "muirGlacierBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "arrowGlacierBlock": "0xFFFFFFFFFFFFFFFF",
+    "grayGlacierBlock": "0xFFFFFFFFFFFFFFFF",
+    "mergeNetsplitBlock": "0xFFFFFFFFFFFFFFFF",
+    "shanghaiTime": "0",
+    "cancunTime": "0xFFFFFFFFFFFFFFFF",
+    "pragueTime": "0xFFFFFFFFFFFFFFFF",
+    "bedrockBlock": "0xFFFFFFFFFFFFFFFF",
+    "regolithTime": "0xFFFFFFFFFFFFFFFF",
+    "canyonTime": "0xFFFFFFFFFFFFFFFF",
+    "ecotoneTime": "0xFFFFFFFFFFFFFFFF",
+    "fjordTime": "0xFFFFFFFFFFFFFFFF",
+    "graniteTime": "0xFFFFFFFFFFFFFFFF",
+    "holoceneTime": "0xFFFFFFFFFFFFFFFF",
+    "isthmusTime": "0xFFFFFFFFFFFFFFFF",
+    "terminalTotalDifficulty": 58750000000000000000000,
+    "depositContractAddress": "0x0000000000000000000000000000000000000000"
+  }
+}

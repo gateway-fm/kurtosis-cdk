@@ -14,6 +14,7 @@ pwd=$(pwd)
 
 l2ChainId=1001
 vkeySelector="0x${l2ChainId}0001"
+programVKey="0x6a61e6d71ad367ec4e14ab490bb0cb9f0c53aa376c9c500145c909246570eb1c"
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
@@ -89,8 +90,8 @@ jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > t
 jq ".aggchainParams.useDefaultVkeys = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initAggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initOwnedAggchainVKey = \"0x1111111111111111111111111111111111111111111111111111111111111111\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.ownedAggchainVKey = \"0x1111111111111111111111111111111111111111111111111111111111111111\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initOwnedAggchainVKey = \"$programVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.ownedAggchainVKey = \"$programVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.signers = [[\"$sequencer_address\", \" \"]]" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 cp create_rollup_parameters.json zkevm-contracts/deployment/v2/create_rollup_parameters.json
 
@@ -320,6 +321,9 @@ sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
 sed -i '' "s#{{proposer_url}}#$proposerUrlAsHttp#g" aggkit-prover-config.toml
 sed -i '' "s#{{agglayer_prover_network_url}}#https://rpc.production.succinct.xyz#g" aggkit-prover-config.toml
 
+cp templates/evm-sketch-genesis.json evm-sketch-genesis.json
+sed -i '' "s#{{zkevm_rollup_chain_id}}#$l2ChainId#g" evm-sketch-genesis.json
+
 mkdir -p aggkit-oracle
 mkdir -p aggkit-bridge
 mkdir -p zkevm-bridge
@@ -348,6 +352,7 @@ done
 docker compose -f zkevm.yaml up zkevm-bridge -d
 
 cp aggkit-prover-config.toml aggkit-prover/config.toml
+cp evm-sketch-genesis.json aggkit-sender/evm-sketch-genesis.json
 docker compose -f aggkit.yaml up agg-prover -d
 
 cp aggkit-config.toml aggkit-sender/config.toml

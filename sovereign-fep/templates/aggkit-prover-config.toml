@@ -24,14 +24,16 @@ l2-execution-layer-rpc-endpoint = "{{l2_el_rpc_url}}"
 l2-consensus-layer-rpc-endpoint = "{{l2_cl_rpc_url}}"
 polygon-rollup-manager = "{{rollup_manager_address}}"
 global-exit-root-manager-v2-sovereign-chain = "{{global_exit_root_address}}"
-evm-sketch-genesis = "/etc/aggkit/evm-sketch-genesis.json" # TODO: The order of deployment is important for this json file to exist at the time of populating this config file.
+# evm-sketch-genesis = "/etc/aggkit/evm-sketch-genesis.json" # TODO: The order of deployment is important for this json file to exist at the time of populating this config file.
+evm-sketch-genesis = "/Users/scott/src/gatewayfm/kurtosis-cdk/sovereign-fep/aggkit-prover/evm-sketch-genesis.json" # TODO: The order of deployment is important for this json file to exist at the time of populating this config file.
 
 [aggchain-proof-service.proposer-service]
 l1-rpc-endpoint = "{{l1_rpc_url}}"
 mock = {{op_succinct_mock}}
 
 [aggchain-proof-service.proposer-service.client]
-proposer-endpoint = "{{proposer_url}}"
+# proposer-endpoint = "{{proposer_url}}"
+proposer-endpoint = "http://127.0.0.1:50051"
 sp1-cluster-endpoint = "{{agglayer_prover_network_url}}"
 request-timeout = 600
 proving-timeout = 3600
