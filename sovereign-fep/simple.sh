@@ -352,7 +352,7 @@ done
 docker compose -f zkevm.yaml up zkevm-bridge -d
 
 cp aggkit-prover-config.toml aggkit-prover/config.toml
-cp evm-sketch-genesis.json aggkit-sender/evm-sketch-genesis.json
+cp evm-sketch-genesis.json aggkit-prover/evm-sketch-genesis.json
 docker compose -f aggkit.yaml up agg-prover -d
 
 cp aggkit-config.toml aggkit-sender/config.toml
