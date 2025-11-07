@@ -12,7 +12,7 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1005
+l2ChainId=1004
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
 programVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
@@ -133,7 +133,12 @@ export DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3
 
 # here we need to stop the default vkey selector from being sent to the contract, this step should only happen for the first rollup
 # kurtosis scripts do the same here to stop this small step from happening.
-sed -i '' '/await aggLayerGateway\.addDefaultAggchainVKey(/,/);/s/^/\/\/ /' ./zkevm-contracts/deployment/v2/4_createRollup.ts
+sed -i '' '/await aggLayerGateway\.addDefaultAggchainVKey(/,/);/s/^/\/\/ /' deployment/v2/4_createRollup.ts
+
+# remove any old create rollup output files
+rm -f zkevm-contracts/deployment/v2/create_rollup_output_*.json 2> /dev/null
+rm -f zkevm-contracts/tools/createSovereignGenesis/genesis-rollupID*.json 2> /dev/null
+rm -f zkevm-contracts/tools/createSovereignGenesis/output-rollupID*.json 2> /dev/null
 
 npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
 # move the create rollup output file into something more predictable
