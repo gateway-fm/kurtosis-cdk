@@ -12,9 +12,9 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1001
-vkeySelector="0x${l2ChainId}0001"
-programVKey="0x6a61e6d71ad367ec4e14ab490bb0cb9f0c53aa376c9c500145c909246570eb1c"
+l2ChainId=1005
+vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
+programVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
@@ -44,6 +44,7 @@ bridgeAddress=$(jq -r '.polygonZkEVMBridgeAddress' deploy_output.json)
 deploymentBlockNumber=$(jq -r '.deploymentRollupManagerBlockNumber' deploy_output.json)
 globalExitRootAddress=$(jq -r '.polygonZkEVMGlobalExitRootAddress' deploy_output.json)
 rollupManagerAddress=$(jq -r '.polygonRollupManagerAddress' deploy_output.json)
+aggLayerGatewayAddress=$(jq -r '.aggLayerGatewayAddress' deploy_output.json)
 
 echo "adminZkEVM: $adminZkEVM"
 echo "pol_token: $pol_token"
@@ -129,6 +130,11 @@ sed -i '' "s#http://127.0.0.1:.*#http://$l1_rpc_url\',#" hardhat.config.ts
 
 echo "[contracts]: Creating rollup"
 export DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625
+
+# here we need to stop the default vkey selector from being sent to the contract, this step should only happen for the first rollup
+# kurtosis scripts do the same here to stop this small step from happening.
+sed -i '' '/await aggLayerGateway\.addDefaultAggchainVKey(/,/);/s/^/\/\/ /' ./zkevm-contracts/deployment/v2/4_createRollup.ts
+
 npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
 # move the create rollup output file into something more predictable
 echo "[contracts]: Done\n"
@@ -263,6 +269,15 @@ echo "Done bridge deploy and call on L2"
 echo "Adding signer to the AggchainFEP contract"
 cast send -r $l1_rpc_url --private-key $master_key $address_zkevm "updateSignersAndThreshold((address,uint256)[],(address,string)[],uint256)" "[]" "[($sequencer_address,' ')]" "1"
 echo "Done adding signer to the AggchainFEP contract"
+
+# now we need to determine if the vkey selector pair is on the L1 or not and add it if we don't have it there yet
+echo "Checking AggLayer gateway for default Aggchain VKey"
+if cast call -r $l1_rpc_url $aggLayerGatewayAddress "getDefaultAggchainVKey(bytes4)" "$vkeySelector" >/dev/null 2>&1; then
+    echo "Default Aggchain VKey already set for selector $vkeySelector"
+else
+    echo "Default Aggchain VKey missing for selector $vkeySelector; adding it now"
+    cast send -r $l1_rpc_url --private-key $master_key $aggLayerGatewayAddress "addDefaultAggchainVKey(bytes4,bytes32)" "$vkeySelector" "$programVKey"
+fi
 
 
 # now start aggkit up
