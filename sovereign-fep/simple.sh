@@ -12,10 +12,8 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1002
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
 programVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
-echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
 contracts_container=$(docker ps -a --filter "name=contracts-001" --format "{{.ID}}")
@@ -63,8 +61,16 @@ sequencer_key=0xd828fe23d9d8e92aa1c92ad2b7e172a9c35608d42d114068abd7bb2da98c38cd
 sequencer_address=0x0318A80977AcEF01302CA8911164d597cE5804a4
 
 # fund the sequencer and hardhat address used for deploying things
-cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "$sequencer_address"
-cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" "$hardhat_address"
+cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" --quiet "$sequencer_address"
+cast send --rpc-url "$l1_rpc_url" --private-key "$master_key" --value "1ether" --quiet "$hardhat_address"
+
+# now discover the chain ID that we'll use for this deployment
+rollupCount=$(cast call -r "$l1_rpc_url" "$rollupManagerAddress" "rollupCount()(uint32)")
+echo "Rollup count: $rollupCount"
+
+# now we can use the rollup count to determine the chain ID for this deployment
+l2ChainId=$((rollupCount + 1000))
+echo "Using chain ID: $l2ChainId"
 
 
 # clone the rollup creation parameters from the originally deployed network and we can change the values
@@ -125,8 +131,7 @@ cp create.json ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sov
 cd zkevm-contracts
 
 # make sure the l1 endpoint is pointing to kurtosis from hardhat
-sed -i '' "s#http://el-1-geth-lighthouse:.*#http://$l1_rpc_url\',#" hardhat.config.ts
-sed -i '' "s#http://127.0.0.1:.*#http://$l1_rpc_url\',#" hardhat.config.ts
+sed -i '' "s#url: '.*',#url: 'http://${l1_rpc_url}',#g" hardhat.config.ts
 
 echo "[contracts]: Creating rollup"
 export DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625
@@ -159,6 +164,7 @@ echo "[contracts]: Minting POL tokens for sequencer and adding approval for roll
 cast send \
     --private-key "$sequencer_key" \
     --rpc-url "$l1_rpc_url" \
+    --quiet \
     "$pol_token" \
     'mint(address,uint256)' \
     "$sequencer_address" \
@@ -170,6 +176,7 @@ cast send \
     --private-key "$sequencer_key" \
     --legacy \
     --rpc-url "$l1_rpc_url" \
+    --quiet \
     "$pol_token" \
     'approve(address,uint256)(bool)' \
     "$address_zkevm" 1000000000000000000000000000
@@ -247,6 +254,7 @@ cast send \
     --private-key "$master_key" \
     --value "$gas_cost" \
     --nonce "$account_nonce" \
+    --quiet \
     "$signer_address"
 cast publish --rpc-url "http://127.0.0.1:8123" "$transaction"
 if [[ $(cast code --rpc-url "http://127.0.0.1:8123" $deployer_address) == "0x" ]]; then
