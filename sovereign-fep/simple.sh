@@ -12,7 +12,7 @@
 #
 pwd=$(pwd)
 
-l2ChainId=1004
+l2ChainId=1002
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
 programVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
 echo "Using chain Id $l2ChainId and vkey selector $vkeySelector"

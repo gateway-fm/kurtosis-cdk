@@ -8,7 +8,6 @@ zkevm.l2-sequencer-rpc-url: "http://34.175.214.161:18123"
 zkevm.l2-datastreamer-url: "34.175.214.161:16900"
 zkevm.l1-chain-id: 2151908
 zkevm.l1-rpc-url: http://localhost:8545
-zkevm.initial-batch.config: "first-batch-config.json"
 
 zkevm.address-sequencer: "0x153724F17B1eb206e31CAbA82f6b45E865879D94"
 zkevm.address-zkevm: "0xA24686d989DCd70fBb4D8311694820d74872f061"

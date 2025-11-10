@@ -22,8 +22,6 @@
         "pragueTime": 0,
         "normalcyBlock": 0,
         "pmtEnabledBlock": 0,
-        "disableZkevmStateChangesBlock": 0,
-        "debugDisableZkevmStateChanges": true,
-        "sovereignMode": true,
+        "sovereignModeBlock": 0,
         "ethash": {}
       }
