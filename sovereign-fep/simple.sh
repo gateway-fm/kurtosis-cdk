@@ -12,9 +12,12 @@
 #
 pwd=$(pwd)
 
+# make sure previous networks have been removed
+./stop.sh
+
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
 proversRepoVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
-# aggregationVkey="0x00afb45d8064ae10aa6a1793b8f39a24c27268efae2917b5c02950b2377fbf00"
+aggregationVkey="0x00afb45d8064ae10aa6a1793b8f39a24c27268efae2917b5c02950b2377fbf00"
 rangeVkeyCommitment="0x416d710344b6b6fa2a0b1a1445f3d6ba4fdd5ab43f0e863b1c522db20f28ad9b"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
@@ -95,7 +98,7 @@ jq ".sovereignParams.emergencyBridgeUnpauser = \"$adminZkEVM\"" create_rollup_pa
 jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initParams.aggregationVkey = \"$proversRepoVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.aggregationVkey = \"$aggregationVkey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.rangeVkeyCommitment = \"$rangeVkeyCommitment\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
