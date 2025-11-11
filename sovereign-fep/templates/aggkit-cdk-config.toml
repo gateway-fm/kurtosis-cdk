@@ -19,7 +19,7 @@ AggLayerURL = "{{agglayer_grpc_as_http_url}}"
 
 AggchainProofURL= "{{agglayer_prover_grpc}}"
 
-NetworkID = 1
+NetworkID = {{network_id}}
 
 SequencerPrivateKeyPath = "/etc/aggkit/sequencer.keystore"
 SequencerPrivateKeyPassword  = "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m"

@@ -314,6 +314,7 @@ proposerUrl=$(kurtosis port print cdk op-succinct-proposer-001 grpc)
 proposerUrlAsHttp=$(echo $proposerUrl | sed 's#grpc#http#')
 
 cp templates/aggkit-cdk-config.toml aggkit-config.toml
+sed -i '' "s#{{network_id}}#$nextRollupId#g" aggkit-config.toml
 sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" aggkit-config.toml
 sed -i '' "s#{{agglayer_grpc_url}}#$aggLayerGrpcUrl#g" aggkit-config.toml
 sed -i '' "s#{{agglayer_grpc_as_http_url}}#$agglayerGrpcAsHttpUrl#g" aggkit-config.toml
