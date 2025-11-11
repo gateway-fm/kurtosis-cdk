@@ -13,7 +13,9 @@
 pwd=$(pwd)
 
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
-programVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
+proversRepoVKey="0x70d061b24b1d8e5e73705be213bbcd1d20e154a74483849c3decaf0808d471b6"
+# aggregationVkey="0x00afb45d8064ae10aa6a1793b8f39a24c27268efae2917b5c02950b2377fbf00"
+rangeVkeyCommitment="0x416d710344b6b6fa2a0b1a1445f3d6ba4fdd5ab43f0e863b1c522db20f28ad9b"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
 contracts_container=$(docker ps -a --filter "name=contracts-001" --format "{{.ID}}")
@@ -72,6 +74,7 @@ echo "Rollup count: $rollupCount"
 l2ChainId=$((rollupCount + 1000))
 echo "Using chain ID: $l2ChainId"
 
+nextRollupId=$((rollupCount + 1))
 
 # clone the rollup creation parameters from the originally deployed network and we can change the values
 # we care about and put it back before launcing the new rollup.
@@ -92,13 +95,15 @@ jq ".sovereignParams.emergencyBridgeUnpauser = \"$adminZkEVM\"" create_rollup_pa
 jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.aggregationVkey = \"$proversRepoVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.rangeVkeyCommitment = \"$rangeVkeyCommitment\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultVkeys = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initAggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainVKeySelector = \"$vkeySelector\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initOwnedAggchainVKey = \"$programVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.ownedAggchainVKey = \"$programVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initOwnedAggchainVKey = \"$proversRepoVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.ownedAggchainVKey = \"$proversRepoVKey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.signers = [[\"$sequencer_address\", \" \"]]" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 cp create_rollup_parameters.json zkevm-contracts/deployment/v2/create_rollup_parameters.json
 
@@ -280,7 +285,7 @@ cd $pwd
 echo "Done bridge deploy and call on L2"
 
 echo "Adding signer to the AggchainFEP contract"
-cast send -r $l1_rpc_url --private-key $master_key $address_zkevm "updateSignersAndThreshold((address,uint256)[],(address,string)[],uint256)" "[]" "[($sequencer_address,' ')]" "1"
+cast send -r $l1_rpc_url --quiet --private-key $master_key $address_zkevm "updateSignersAndThreshold((address,uint256)[],(address,string)[],uint256)" "[]" "[($sequencer_address,' ')]" "1"
 echo "Done adding signer to the AggchainFEP contract"
 
 # now we need to determine if the vkey selector pair is on the L1 or not and add it if we don't have it there yet
@@ -289,7 +294,7 @@ if cast call -r $l1_rpc_url $aggLayerGatewayAddress "getDefaultAggchainVKey(byte
     echo "Default Aggchain VKey already set for selector $vkeySelector"
 else
     echo "Default Aggchain VKey missing for selector $vkeySelector; adding it now"
-    cast send -r $l1_rpc_url --private-key $master_key $aggLayerGatewayAddress "addDefaultAggchainVKey(bytes4,bytes32)" "$vkeySelector" "$programVKey"
+    cast send -r $l1_rpc_url --quiet --private-key $master_key $aggLayerGatewayAddress "addDefaultAggchainVKey(bytes4,bytes32)" "$vkeySelector" "$proversRepoVKey"
 fi
 
 
@@ -338,7 +343,7 @@ cp templates/aggkit-prover-config.toml aggkit-prover-config.toml
 sed -i '' "s#{{aggkit_prover_grpc_port}}#4446#g" aggkit-prover-config.toml
 sed -i '' "s#{{log_level}}#info#g" aggkit-prover-config.toml
 sed -i '' "s#{{metrics_port}}#9093#g" aggkit-prover-config.toml
-sed -i '' "s#{{network_id}}#1#g" aggkit-prover-config.toml
+sed -i '' "s#{{network_id}}#$nextRollupId#g" aggkit-prover-config.toml
 sed -i '' "s#{{primary_prover}}#mock-prover#g" aggkit-prover-config.toml
 sed -i '' "s#{{l1_rpc_url}}#http://$l1_rpc_url#g" aggkit-prover-config.toml
 sed -i '' "s#{{l2_el_rpc_url}}#http://127.0.0.1:8123#g" aggkit-prover-config.toml
