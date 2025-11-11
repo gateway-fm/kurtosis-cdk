@@ -356,6 +356,7 @@ sed -i '' "s#{{global_exit_root_address}}#$l2GerContractAddress#g" aggkit-prover
 sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
 sed -i '' "s#{{proposer_url}}#$proposerUrlAsHttp#g" aggkit-prover-config.toml
 sed -i '' "s#{{agglayer_prover_network_url}}#https://rpc.production.succinct.xyz#g" aggkit-prover-config.toml
+sed -i '' "s#{{location}}#$pwd#g" aggkit-prover-config.toml
 
 cp templates/evm-sketch-genesis.json evm-sketch-genesis.json
 sed -i '' "s#{{zkevm_rollup_chain_id}}#$l2ChainId#g" evm-sketch-genesis.json
