@@ -378,6 +378,8 @@ cp aggkit-config.toml aggkit-oracle/config.toml
 docker compose -f aggkit.yaml up agg-oracle -d
 
 cp aggkit-config.toml aggkit-bridge/config.toml
+sed -i '' "s/Port = \"5576\"/Port = \"5578\"/g" aggkit-bridge/config.toml
+sed -i '' "s/Port = \"5577\"/Port = \"5579\"/g" aggkit-bridge/config.toml
 docker compose -f aggkit.yaml up agg-bridge -d
 
 cp zkevm-bridge-config.toml zkevm-bridge/zkevm-bridge-config.toml
@@ -390,8 +392,12 @@ done
 docker compose -f zkevm.yaml up zkevm-bridge -d
 
 cp aggkit-prover-config.toml aggkit-prover/config.toml
+sed -i '' "s/Port = \"5576\"/Port = \"5580\"/g" aggkit-prover/config.toml
+sed -i '' "s/Port = \"5577\"/Port = \"5581\"/g" aggkit-prover/config.toml
 cp evm-sketch-genesis.json aggkit-prover/evm-sketch-genesis.json
 docker compose -f aggkit.yaml up agg-prover -d
 
 cp aggkit-config.toml aggkit-sender/config.toml
+sed -i '' "s/Port = \"5576\"/Port = \"5582\"/g" aggkit-sender/config.toml
+sed -i '' "s/Port = \"5577\"/Port = \"5583\"/g" aggkit-sender/config.toml
 docker compose -f aggkit.yaml up agg-sender -d
