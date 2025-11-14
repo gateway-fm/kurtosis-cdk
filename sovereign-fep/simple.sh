@@ -77,7 +77,6 @@ echo "Rollup count: $rollupCount"
 l2ChainId=$((rollupCount + 1000))
 echo "Using chain ID: $l2ChainId"
 
-nextRollupId=$((rollupCount + 1))
 
 now=$(date +%s)
 
@@ -99,7 +98,7 @@ jq ".sovereignParams.emergencyBridgePauser = \"$adminZkEVM\"" create_rollup_para
 jq ".sovereignParams.emergencyBridgeUnpauser = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initParams.l2BlockTime = 4" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.l2BlockTime = 1" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.submissionInterval = 4" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.aggregationVkey = \"$aggregationVkey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -122,25 +121,6 @@ rm -rf genesis-rollupID*
 rm -rf output-rollupID*
 popd
 
-cp ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sovereign-params.json.example create.json
-
-# change the values we need to and build our gensis file up
-jq ".rollupManagerAddress = \"$rollupManagerAddress\"" create.json > temp.json; mv temp.json create.json
-jq ".chainID = \"$l2ChainId\"" create.json > temp.json; mv temp.json create.json
-jq ".rollupID = \"2\"" create.json > temp.json; mv temp.json create.json
-jq ".bridgeManager = \"$bridgeAddress\"" create.json > temp.json; mv temp.json create.json
-jq ".globalExitRootUpdater = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".globalExitRootRemover = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".emergencyBridgePauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".emergencyBridgeUnpauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".proxiedTokensManager = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".preMintAccounts = [{\"balance\": \"1000000000000000000\", \"address\": \"$master_address\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0xe859276098f208D003ca6904C6cC26629Ee364Ce\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0x0318A80977AcEF01302CA8911164d597cE5804a4\"}]" create.json > temp.json; mv temp.json create.json
-jq ".timelockParameters.adminAddress = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".useAggOracleCommittee = false" create.json > temp.json; mv temp.json create.json
-jq ".aggOracleOwner = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq "del(.formatGenesis)" create.json > temp.json; mv temp.json create.json
-
-cp create.json ./zkevm-contracts/tools/createSovereignGenesis/create-genesis-sovereign-params.json
 
 cd zkevm-contracts
 
@@ -155,22 +135,47 @@ export DEPLOYER_PRIVATE_KEY=0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3
 sed -i '' '/await aggLayerGateway\.addDefaultAggchainVKey(/,/);/s/^/\/\/ /' deployment/v2/4_createRollup.ts
 
 # remove any old create rollup output files
-rm -f zkevm-contracts/deployment/v2/create_rollup_output_*.json 2> /dev/null
-rm -f zkevm-contracts/tools/createSovereignGenesis/genesis-rollupID*.json 2> /dev/null
-rm -f zkevm-contracts/tools/createSovereignGenesis/output-rollupID*.json 2> /dev/null
+rm -f deployment/v2/create_rollup_output_*.json 2> /dev/null
+rm -f tools/createSovereignGenesis/genesis-rollupID*.json 2> /dev/null
+rm -f tools/createSovereignGenesis/output-rollupID*.json 2> /dev/null
 
 npx hardhat run deployment/v2/4_createRollup.ts --network localhost 2>&1 | tee 05_create_rollup.out
 # move the create rollup output file into something more predictable
 echo "[contracts]: Done\n"
 
 echo "[contracts]: Creating genesis"
+
+mv $(ls deployment/v2/create_rollup_output_*.json) ${pwd}/create_rollup_output.json
+nextRollupId=$(jq -r '.rollupID' ${pwd}/create_rollup_output.json)
+echo "Next rollup ID: $nextRollupId"
+
+cp ./tools/createSovereignGenesis/create-genesis-sovereign-params.json.example create.json
+
+# change the values we need to and build our gensis file up
+jq ".rollupManagerAddress = \"$rollupManagerAddress\"" create.json > temp.json; mv temp.json create.json
+jq ".chainID = \"$l2ChainId\"" create.json > temp.json; mv temp.json create.json
+jq ".rollupID = \"$nextRollupId\"" create.json > temp.json; mv temp.json create.json
+jq ".bridgeManager = \"$bridgeAddress\"" create.json > temp.json; mv temp.json create.json
+jq ".globalExitRootUpdater = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".globalExitRootRemover = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".emergencyBridgePauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".emergencyBridgeUnpauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".proxiedTokensManager = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".preMintAccounts = [{\"balance\": \"1000000000000000000\", \"address\": \"$master_address\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0xe859276098f208D003ca6904C6cC26629Ee364Ce\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0x0318A80977AcEF01302CA8911164d597cE5804a4\"}]" create.json > temp.json; mv temp.json create.json
+jq ".timelockParameters.adminAddress = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq ".useAggOracleCommittee = false" create.json > temp.json; mv temp.json create.json
+jq ".aggOracleOwner = \"$master_address\"" create.json > temp.json; mv temp.json create.json
+jq "del(.formatGenesis)" create.json > temp.json; mv temp.json create.json
+
+cp create.json ./tools/createSovereignGenesis/create-genesis-sovereign-params.json
+
 # quickly get how many rollups there are so we can use this in the genesis input file
 npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --network localhost 2>&1 | tee 04_create_genesis.out
 echo "[contracts]: Done\n"
 
 # copy the created rollup and genesis file from the zkevm folder to where we can work with them easily
 cd $pwd
-mv $(ls zkevm-contracts/deployment/v2/create_rollup_output_*.json) create_rollup_output.json
+
 mv $(ls zkevm-contracts/tools/createSovereignGenesis/genesis-rollupID*.json) genesis.json
 
 echo "[contracts]: Minting POL tokens for sequencer and adding approval for rollup"
