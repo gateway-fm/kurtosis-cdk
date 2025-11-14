@@ -1,11 +1,11 @@
 datadir: "/data"
 chain: "dynamic-network"
 http: true
-private.api.addr: "localhost:9090"
+private.api.addr: localhost:9090
 zkevm.l2-chain-id: xxx
 zkevm.l1-rollup-id: 1
-zkevm.l2-sequencer-rpc-url: "http://34.175.214.161:18123"
-zkevm.l2-datastreamer-url: "34.175.214.161:16900"
+zkevm.l2-sequencer-rpc-url: "http://127.0.0.1:8124"
+zkevm.l2-datastreamer-url: "127.0.0.1:6911"
 zkevm.l1-chain-id: 2151908
 zkevm.l1-rpc-url: http://localhost:8545
 
@@ -50,3 +50,5 @@ zkevm.l1-contract-address-check: true
 zkevm.reject-low-gas-price-transactions: false
 p2p.allowed-ports: "30603,30604,30605,30606"
 zkevm.allow-pre-eip155-transactions: true
+authrpc.port: 8551
+torrent.port: 42072

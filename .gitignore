@@ -49,4 +49,8 @@ sovereign-fep/zkevm-bridge/
 sovereign-fep/aggkit-sender/
 sovereign-fep/aggkit-prover/
 sovereign-fep/aggkit-oracle/
+sovereign-fep/erigon-sequencer-config/
+sovereign-fep/erigon-rpc-config/
+sovereign-fep/sequencer-data/
+sovereign-fep/rpc-data/
 

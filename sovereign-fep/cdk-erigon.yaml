@@ -5,12 +5,29 @@ services:
     container_name: erigon-sequencer
     network_mode: host
     volumes:
-      - ./erigon-config:/etc/cdk-erigon
-      - ./data:/data
+      - ./erigon-sequencer-config:/etc/cdk-erigon
+      - ./sequencer-data:/data
     command: |
       --config /etc/cdk-erigon/dynamic-network-config.yaml
     environment:
       - CDK_ERIGON_SEQUENCER=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8124", "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  erigon-rpc:
+    image: cdk-erigon:local
+    container_name: erigon-rpc
+    network_mode: host
+    volumes:
+      - ./erigon-rpc-config:/etc/cdk-erigon
+      - ./rpc-data:/data
+    command: |
+      --config /etc/cdk-erigon/dynamic-network-config.yaml
+    environment:
+      - CDK_ERIGON_SEQUENCER=0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8123", "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}']
       interval: 10s

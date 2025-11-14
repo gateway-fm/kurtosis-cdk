@@ -79,6 +79,8 @@ echo "Using chain ID: $l2ChainId"
 
 nextRollupId=$((rollupCount + 1))
 
+now=$(date +%s)
+
 # clone the rollup creation parameters from the originally deployed network and we can change the values
 # we care about and put it back before launcing the new rollup.
 cp zkevm-contracts/deployment/v2/create_rollup_parameters.json.example ./create_rollup_parameters.json
@@ -97,9 +99,13 @@ jq ".sovereignParams.emergencyBridgePauser = \"$adminZkEVM\"" create_rollup_para
 jq ".sovereignParams.emergencyBridgeUnpauser = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.l2BlockTime = 4" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.submissionInterval = 4" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.aggregationVkey = \"$aggregationVkey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.rangeVkeyCommitment = \"$rangeVkeyCommitment\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.startingBlockNumber = 10" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.startingTimestamp = $now" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultVkeys = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -128,7 +134,7 @@ jq ".globalExitRootRemover = \"$master_address\"" create.json > temp.json; mv te
 jq ".emergencyBridgePauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
 jq ".emergencyBridgeUnpauser = \"$master_address\"" create.json > temp.json; mv temp.json create.json
 jq ".proxiedTokensManager = \"$master_address\"" create.json > temp.json; mv temp.json create.json
-jq ".preMintAccounts = [{\"balance\": \"1000000000000000000\", \"address\": \"$master_address\"},{\"balance\": \"1000000000000000000\", \"address\": \"0xe859276098f208D003ca6904C6cC26629Ee364Ce\"}]" create.json > temp.json; mv temp.json create.json
+jq ".preMintAccounts = [{\"balance\": \"1000000000000000000\", \"address\": \"$master_address\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0xe859276098f208D003ca6904C6cC26629Ee364Ce\"}, {\"balance\": \"1000000000000000000\", \"address\": \"0x0318A80977AcEF01302CA8911164d597cE5804a4\"}]" create.json > temp.json; mv temp.json create.json
 jq ".timelockParameters.adminAddress = \"$master_address\"" create.json > temp.json; mv temp.json create.json
 jq ".useAggOracleCommittee = false" create.json > temp.json; mv temp.json create.json
 jq ".aggOracleOwner = \"$master_address\"" create.json > temp.json; mv temp.json create.json
@@ -202,9 +208,7 @@ sed -i '' "s/zkevm.address-sequencer: .*/zkevm.address-sequencer: $sequencer_add
 
 address_zkevm=$(jq -r '.rollupAddress' create_rollup_output.json)
 sed -i '' "s/zkevm.address-zkevm: .*/zkevm.address-zkevm: $address_zkevm/" erigon-config/dynamic-network-config.yaml
-
 sed -i '' "s/zkevm.address-rollup: .*/zkevm.address-rollup: $rollupManagerAddress/" erigon-config/dynamic-network-config.yaml
-
 sed -i '' "s/zkevm.address-ger-manager: .*/zkevm.address-ger-manager: $address_ger/" erigon-config/dynamic-network-config.yaml
 
 # conf file
@@ -239,16 +243,46 @@ if ! echo "$output_json" | jq . > "erigon-config/dynamic-network-allocs.json"; t
     exit 1
 fi
 
+# now create the folders for the sequencer and rpc erigon configs so we can stand both up
+mkdir -p erigon-sequencer-config
+mkdir -p erigon-rpc-config
+
+cp erigon-config/dynamic-network-config.yaml erigon-sequencer-config/dynamic-network-config.yaml
+cp erigon-config/dynamic-network-conf.json erigon-sequencer-config/dynamic-network-conf.json
+cp erigon-config/dynamic-network-chainspec.json erigon-sequencer-config/dynamic-network-chainspec.json
+cp erigon-config/dynamic-network-allocs.json erigon-sequencer-config/dynamic-network-allocs.json
+
+cp erigon-config/dynamic-network-config.yaml erigon-rpc-config/dynamic-network-config.yaml
+cp erigon-config/dynamic-network-conf.json erigon-rpc-config/dynamic-network-conf.json
+cp erigon-config/dynamic-network-chainspec.json erigon-rpc-config/dynamic-network-chainspec.json
+cp erigon-config/dynamic-network-allocs.json erigon-rpc-config/dynamic-network-allocs.json
+
+# now make sure the sequencer runs on different ports and doesn't clash with the rpc
+sed -i '' "s/http.port: 8123/http.port: 8124/g" erigon-sequencer-config/dynamic-network-config.yaml
+sed -i '' "s/zkevm.data-stream-port: 6910/zkevm.data-stream-port: 6911/g" erigon-sequencer-config/dynamic-network-config.yaml
+sed -i '' "s/private.api.addr: localhost:9090/private.api.addr: localhost:9091/g" erigon-sequencer-config/dynamic-network-config.yaml
+sed -i '' "s/authrpc.port: 8551/authrpc.port: 8552/g" erigon-sequencer-config/dynamic-network-config.yaml
+sed -i '' "s/torrent.port: 42072/torrent.port: 42073/g" erigon-sequencer-config/dynamic-network-config.yaml
+
 echo "[rollup] Step 1: Done\n"
 
 # now start erigon up
-docker compose -f cdk-erigon.yaml up -d
+docker compose -f cdk-erigon.yaml up erigon-sequencer -d
+sleep 5
+docker compose -f cdk-erigon.yaml up erigon-rpc -d
 
-# wait for the l2 to start then launc the deterministic deployment proxy
-until cast send --rpc-url "http://127.0.0.1:8123" --private-key "$master_key" --value "0.001ether" "$sequencer_address" &> /dev/null; do
-    echo "Waiting for L2 to start..."
+sleep 5
+
+# wait until we have 10 blocks on the L2 before starting the agg oracle - FEP is enabled at block 10 on the L2
+for i in {1..1000}; do
+    number=$(cast block -r "http://127.0.0.1:8123" --json | jq '.number' | xargs cast to-dec)
+    if [ "$number" -gt 10 ]; then
+        break
+    fi
+    echo "Waiting for 10 blocks on the L2... $number"
     sleep 2
 done
+echo "10 blocks on the L2 found, continuing..."
 
 echo "Launching deterministic deployment proxy"
 signer_address="0x3fab184622dc19b6109349b94811493bf2a45362"
@@ -330,19 +364,6 @@ sed -i '' "s#{{zkevm_global_exit_root_l2_address}}#$l2GerContractAddress#g" aggk
 sed -i '' "s#{{zkevm_l2_claimsponsor_address}}#$claimSenderAddress#g" aggkit-config.toml
 sed -i '' "s#{{l2_chain_id}}#$l2ChainId#g" aggkit-config.toml
 
-cp templates/bridge-config.toml zkevm-bridge-config.toml
-sed -i '' "s#{{global_log_level}}#info#g" zkevm-bridge-config.toml
-sed -i '' "s#{{l1_rpc_url}}#$l1_rpc_url#g" zkevm-bridge-config.toml
-sed -i '' "s#{{l2_rpc_url}}#http://127.0.0.1:8123#g" zkevm-bridge-config.toml
-sed -i '' "s#{{grpc_port_number}}#9090#g" zkevm-bridge-config.toml
-sed -i '' "s#{{rpc_port_number}}#8080#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_rollup_manager_block_number}}#$deploymentBlockNumber#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_bridge_address}}#$bridgeAddress#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_global_exit_root_address}}#$globalExitRootAddress#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_rollup_manager_address}}#$rollupManagerAddress#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_rollup_address}}#$rollupAddress#g" zkevm-bridge-config.toml
-sed -i '' "s#{{zkevm_global_exit_root_l2_address}}#$l2GerContractAddress#g" zkevm-bridge-config.toml
-
 cp templates/aggkit-prover-config.toml aggkit-prover-config.toml
 sed -i '' "s#{{aggkit_prover_grpc_port}}#4446#g" aggkit-prover-config.toml
 sed -i '' "s#{{log_level}}#info#g" aggkit-prover-config.toml
@@ -364,7 +385,6 @@ sed -i '' "s#{{zkevm_rollup_chain_id}}#$l2ChainId#g" evm-sketch-genesis.json
 
 mkdir -p aggkit-oracle
 mkdir -p aggkit-bridge
-mkdir -p zkevm-bridge
 mkdir -p aggkit-sender
 mkdir -p aggkit-prover
 
@@ -372,7 +392,7 @@ cast wallet import --keystore-dir aggkit-oracle --private-key $master_key --unsa
 cast wallet import --keystore-dir aggkit-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" bridge.keystore
 cast wallet import --keystore-dir aggkit-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" claimsponsor.keystore
 cast wallet import --keystore-dir aggkit-sender --private-key $sequencer_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" sequencer.keystore
-cast wallet import --keystore-dir zkevm-bridge --private-key $master_key --unsafe-password "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m" claimtxmanager.keystore
+
 
 cp aggkit-config.toml aggkit-oracle/config.toml
 docker compose -f aggkit.yaml up agg-oracle -d
@@ -382,22 +402,17 @@ sed -i '' "s/Port = \"5576\"/Port = \"5578\"/g" aggkit-bridge/config.toml
 sed -i '' "s/Port = \"5577\"/Port = \"5579\"/g" aggkit-bridge/config.toml
 docker compose -f aggkit.yaml up agg-bridge -d
 
-cp zkevm-bridge-config.toml zkevm-bridge/zkevm-bridge-config.toml
-docker compose -f zkevm.yaml up zkevm-postgres -d
-# wait for postgres to be available
-until nc -z "127.0.0.1" "5432"; do
-  echo "Waiting for PostgreSQL on 127.0.0.1:5432..."
-  sleep 2
-done
-docker compose -f zkevm.yaml up zkevm-bridge -d
-
 cp aggkit-prover-config.toml aggkit-prover/config.toml
 sed -i '' "s/Port = \"5576\"/Port = \"5580\"/g" aggkit-prover/config.toml
 sed -i '' "s/Port = \"5577\"/Port = \"5581\"/g" aggkit-prover/config.toml
 cp evm-sketch-genesis.json aggkit-prover/evm-sketch-genesis.json
-docker compose -f aggkit.yaml up agg-prover -d
+# docker compose -f aggkit.yaml up agg-prover -d
 
 cp aggkit-config.toml aggkit-sender/config.toml
+mkdir -p aggkit-sender/tmp
 sed -i '' "s/Port = \"5576\"/Port = \"5582\"/g" aggkit-sender/config.toml
 sed -i '' "s/Port = \"5577\"/Port = \"5583\"/g" aggkit-sender/config.toml
+# for debugging on your own machine you can uncomment the following config changes and stop the container running
+# sed -i '' "s#/etc/aggkit/sequencer.keystore#${pwd}/aggkit-sender/sequencer.keystore#g" aggkit-sender/config.toml
+# sed -i '' "s#/tmp#${pwd}/aggkit-sender/tmp#g" aggkit-sender/config.toml
 docker compose -f aggkit.yaml up agg-sender -d

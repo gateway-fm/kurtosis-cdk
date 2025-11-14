@@ -13,7 +13,7 @@
 
 PathRWData = "/tmp"
 L1URL = "http://{{l1_rpc_url}}"
-L2URL = "http://localhost:8123"
+L2URL = "http://127.0.0.1:8123"
 
 AggLayerURL = "{{agglayer_grpc_as_http_url}}"
 
@@ -26,7 +26,7 @@ SequencerPrivateKeyPassword  = "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m"
 
 polygonBridgeAddr = "{{zkevm_bridge_address}}"
 
-RPCURL = "http://localhost:8123"
+RPCURL = "http://127.0.0.1:8123"
 
 # These values can be overridden directly from genesis.json
 rollupCreationBlockNumber = "{{zkevm_rollup_manager_block_number}}"
@@ -191,7 +191,7 @@ UseTLS = false
 [AggSender.OptimisticModeConfig]
 SovereignRollupAddr = "{{zkevm_rollup_address}}"
 TrustedSequencerKey = {Path = "/etc/aggkit/sequencer.keystore", Password = "pSnv6Dh5s9ahuzGzH9RoCDrKAMddaX3m"}
-OpNodeURL = "http://localhost:8123"
+OpNodeURL = "http://127.0.0.1:8123"
 RequireKeyMatchTrustedSequencer = true
 
 # ------------------------------------------------------------------------------
@@ -575,7 +575,7 @@ StoragePath = "/tmp/ethtxmanager-claimsponsor.sqlite"
 # ------------------------------------------------------------------------------
 # URL is the URL of the Ethereum node for L2
 # ------------------------------------------------------------------------------
-URL= "http://localhost:8123"
+URL= "http://127.0.0.1:8123"
 
 # ------------------------------------------------------------------------------
 # Needs to be set to be the sovereign L2 chain id
