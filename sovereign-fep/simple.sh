@@ -421,3 +421,8 @@ sed -i '' "s/Port = \"5577\"/Port = \"5583\"/g" aggkit-sender/config.toml
 # sed -i '' "s#/etc/aggkit/sequencer.keystore#${pwd}/aggkit-sender/sequencer.keystore#g" aggkit-sender/config.toml
 # sed -i '' "s#/tmp#${pwd}/aggkit-sender/tmp#g" aggkit-sender/config.toml
 docker compose -f aggkit.yaml up agg-sender -d
+
+# stop the kurtosis bridge spammer service as it causes problems with our simplistic bridge tests
+# due to us not tracking indexes properly in them for pure ease of use, we assume the latest bridge 
+# made was our own and the spammer messes with the idea.
+kurtosis service stop cdk bridge-spammer-001
