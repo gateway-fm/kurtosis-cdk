@@ -426,3 +426,29 @@ docker compose -f aggkit.yaml up agg-sender -d
 # due to us not tracking indexes properly in them for pure ease of use, we assume the latest bridge 
 # made was our own and the spammer messes with the idea.
 kurtosis service stop cdk bridge-spammer-001
+
+# now we need to set up a reth node and have it ready to start receiving blocks from the L2 and 
+# allow the proposer to create block proofs.
+mkdir reth-config reth-data engine-api-sync
+cp rpc-data/jwt.hex reth-config/jwt.hex
+docker run --rm --name reth-genesis -v ./reth-config:/etc/reth-config -v ./erigon-config:/etc/erigon-config --entrypoint "reth-allocs" engine-api-sync:latest \
+    -allocs /etc/erigon-config/dynamic-network-allocs.json \
+    -output /etc/reth-config/reth-genesis.json \
+    -cdk-config /etc/erigon-config/dynamic-network-config.yaml \
+    -chain-config /etc/erigon-config/dynamic-network-conf.json \
+    -chainspec /etc/erigon-config/dynamic-network-chainspec.json \
+    -normalize-balances=true
+
+docker run --rm --name reth-init -v ./reth-config:/etc/reth-config -v ./reth-data:/etc/data ghcr.io/paradigmxyz/reth init \
+    --datadir /etc/data \
+    --chain /etc/reth-config/reth-genesis.json
+
+docker compose -f reth.yaml up reth-node -d
+
+# now reth is up with the same genesis as erigon we can start the engine api sync
+# service
+mkdir -p engine-api-sync
+cp rpc-data/jwt.hex engine-api-sync/jwt.hex
+sed -i '' "s/^0x//g" engine-api-sync/jwt.hex
+cp templates/engine-api-sync.yaml engine-api-sync/config.yaml
+docker compose -f reth.yaml up engine-api-sync -d

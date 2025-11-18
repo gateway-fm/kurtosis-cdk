@@ -54,3 +54,6 @@ sovereign-fep/erigon-rpc-config/
 sovereign-fep/sequencer-data/
 sovereign-fep/rpc-data/
 sovereign-fep/bridge-checks/inbound-out.txt
+sovereign-fep/reth-config/
+sovereign-fep/reth-data/
+sovereign-fep/engine-api-sync/

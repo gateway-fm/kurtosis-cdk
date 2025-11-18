@@ -1,0 +1,8 @@
+sourcerpcurl: http://localhost:8123
+destinationengineapiurl: http://localhost:8553
+destinationrpcurl: http://localhost:8125
+polltime: 500ms
+jwtsecretfile: /home/appuser/jwt.hex
+shanghaitime: 0
+cancuntime: 0
+praguetime: 0

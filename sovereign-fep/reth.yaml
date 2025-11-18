@@ -1,0 +1,37 @@
+services:
+  # Anvil - Foundry's local Ethereum node with latest EIPs
+  reth-node:
+    image: ghcr.io/paradigmxyz/reth
+    container_name: reth-node
+    network_mode: host
+    volumes:
+      - ./reth-config:/etc/reth
+      - ./reth-data:/data
+    command: |
+      node 
+      --datadir /data 
+      --chain /etc/reth/reth-genesis.json
+      --disable-discovery
+      --max-outbound-peers 0
+      --max-inbound-peers 0
+      --http
+      --http.addr 0.0.0.0
+      --http.port 8125
+      --http.api debug,eth,net,trace,txpool,web3,rpc
+      --authrpc.addr 0.0.0.0
+      --authrpc.port 8553
+      --authrpc.jwtsecret /etc/reth/jwt.hex
+      --rpc.eth-proof-window 20000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8125", "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  engine-api-sync:
+    image: engine-api-sync:latest
+    container_name: engine-api-sync
+    network_mode: host
+    volumes:
+      - ./engine-api-sync:/home/appuser
+    command: |
+      engine-api-executor

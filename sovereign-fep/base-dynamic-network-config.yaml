@@ -1,6 +1,5 @@
 datadir: "/data"
 chain: "dynamic-network"
-http: true
 private.api.addr: localhost:9090
 zkevm.l2-chain-id: xxx
 zkevm.l1-rollup-id: 1
