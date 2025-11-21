@@ -23,5 +23,6 @@
         "normalcyBlock": 0,
         "pmtEnabledBlock": 0,
         "sovereignModeBlock": 0,
+        "fepTime": 0,
         "ethash": {}
       }
