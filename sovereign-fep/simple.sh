@@ -16,9 +16,11 @@ pwd=$(pwd)
 ./stop.sh
 
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
-proversRepoVKey="0x2ea95de1270cce23390aa9da08bc9d5d6be7afeb421b173b6eefb469512bdf60"
-aggregationVkey="0x00afb45d8064ae10aa6a1793b8f39a24c27268efae2917b5c02950b2377fbf00"
-rangeVkeyCommitment="0x416d710344b6b6fa2a0b1a1445f3d6ba4fdd5ab43f0e863b1c522db20f28ad9b"
+proversRepoVKey="0x2ea95de1270cce23390aa9da08bc9d5d6be7afeb421b173b6eefb469512bdf60" # from the forked provers repo - the aggchain proof program key
+aggregationVkey="0x00020a06764d9d91682299890e9103f4e25e80b00095a75044c8f46c668edf2e" # from the cdk-proposer aggregation program
+rangeVkeyCommitment="0x7172a79b0988cb7418ee72cb13a2fc5b5dcb0ae33d444c2a1a67d16d688be082" # from the cdk-proposer range program
+proverClusterEndpoint="http://54.80.235.18:51015"
+mock="false"
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
 contracts_container=$(docker ps -a --filter "name=contracts-001" --format "{{.ID}}")
@@ -374,16 +376,21 @@ sed -i '' "s#{{aggkit_prover_grpc_port}}#4446#g" aggkit-prover-config.toml
 sed -i '' "s#{{log_level}}#info#g" aggkit-prover-config.toml
 sed -i '' "s#{{metrics_port}}#9093#g" aggkit-prover-config.toml
 sed -i '' "s#{{network_id}}#$nextRollupId#g" aggkit-prover-config.toml
-sed -i '' "s#{{primary_prover}}#mock-prover#g" aggkit-prover-config.toml
 sed -i '' "s#{{l1_rpc_url}}#http://$l1_rpc_url#g" aggkit-prover-config.toml
 sed -i '' "s#{{l2_el_rpc_url}}#http://127.0.0.1:8123#g" aggkit-prover-config.toml
 sed -i '' "s#{{l2_cl_rpc_url}}#http://127.0.0.1:8123#g" aggkit-prover-config.toml
 sed -i '' "s#{{rollup_manager_address}}#$rollupManagerAddress#g" aggkit-prover-config.toml
 sed -i '' "s#{{global_exit_root_address}}#$l2GerContractAddress#g" aggkit-prover-config.toml
-sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
 sed -i '' "s#{{proposer_url}}#$proposerUrlAsHttp#g" aggkit-prover-config.toml
-sed -i '' "s#{{agglayer_prover_network_url}}#https://rpc.production.succinct.xyz#g" aggkit-prover-config.toml
+sed -i '' "s#{{agglayer_prover_network_url}}#$proverClusterEndpoint#g" aggkit-prover-config.toml
 sed -i '' "s#{{location}}#$pwd#g" aggkit-prover-config.toml
+if [ "$mock" = "false" ]; then
+    sed -i '' "s#{{primary_prover}}#network-prover#g" aggkit-prover-config.toml
+    sed -i '' "s#{{op_succinct_mock}}#false#g" aggkit-prover-config.toml
+else
+    sed -i '' "s#{{primary_prover}}#mock-prover#g" aggkit-prover-config.toml
+    sed -i '' "s#{{op_succinct_mock}}#true#g" aggkit-prover-config.toml
+fi
 
 cp templates/evm-sketch-genesis.json evm-sketch-genesis.json
 sed -i '' "s#{{zkevm_rollup_chain_id}}#$l2ChainId#g" evm-sketch-genesis.json
