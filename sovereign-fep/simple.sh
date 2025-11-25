@@ -333,13 +333,14 @@ cast send -r $l1_rpc_url --quiet --private-key $master_key $address_zkevm "updat
 echo "Done adding signer to the AggchainFEP contract"
 
 # now we need to determine if the vkey selector pair is on the L1 or not and add it if we don't have it there yet
-echo "Checking AggLayer gateway for default Aggchain VKey"
-if cast call -r $l1_rpc_url $aggLayerGatewayAddress "getDefaultAggchainVKey(bytes4)" "$vkeySelector" >/dev/null 2>&1; then
-    echo "Default Aggchain VKey already set for selector $vkeySelector"
-else
-    echo "Default Aggchain VKey missing for selector $vkeySelector; adding it now"
-    cast send -r $l1_rpc_url --quiet --private-key $master_key $aggLayerGatewayAddress "addDefaultAggchainVKey(bytes4,bytes32)" "$vkeySelector" "$proversRepoVKey"
-fi
+# !! we should not need this unless we are using the default vkey selector (useDefaultVkeys: true in create_rollup_parameters.json)
+# echo "Checking AggLayer gateway for default Aggchain VKey"
+# if cast call -r $l1_rpc_url $aggLayerGatewayAddress "getDefaultAggchainVKey(bytes4)" "$vkeySelector" >/dev/null 2>&1; then
+#     echo "Default Aggchain VKey already set for selector $vkeySelector"
+# else
+#     echo "Default Aggchain VKey missing for selector $vkeySelector; adding it now"
+#     cast send -r $l1_rpc_url --quiet --private-key $master_key $aggLayerGatewayAddress "addDefaultAggchainVKey(bytes4,bytes32)" "$vkeySelector" "$proversRepoVKey"
+# fi
 
 
 # now start aggkit up
