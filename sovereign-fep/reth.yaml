@@ -28,7 +28,7 @@ services:
       timeout: 5s
       retries: 3
   engine-api-sync:
-    image: engine-api-sync:latest
+    image: gatewayfm/engine-api-sync:1.0.0
     container_name: engine-api-sync
     network_mode: host
     volumes:

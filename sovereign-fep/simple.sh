@@ -17,10 +17,12 @@ pwd=$(pwd)
 
 vkeySelector="0x00070001" # hard coded to match the vkey selector from the agg prover program in aggkit/provers repo
 proversRepoVKey="0x2ea95de1270cce23390aa9da08bc9d5d6be7afeb421b173b6eefb469512bdf60" # from the forked provers repo - the aggchain proof program key
-aggregationVkey="0x00020a06764d9d91682299890e9103f4e25e80b00095a75044c8f46c668edf2e" # from the cdk-proposer aggregation program
-rangeVkeyCommitment="0x7172a79b0988cb7418ee72cb13a2fc5b5dcb0ae33d444c2a1a67d16d688be082" # from the cdk-proposer range program
-proverClusterEndpoint="http://54.80.235.18:51015"
+aggregationVkey="0x000a37727a0cdafc152800ffa75b06894212c3886b93ee5283e49df15ebda137" # from the cdk-proposer aggregation program
+rangeVkeyCommitment="0x53c6434f6c031a151409dc7974016c6748e399b371d9ab170ae2bda35f4929aa" # from the cdk-proposer range program
+proverClusterEndpoint="http://54.209.245.97:51015"
 mock="false"
+blockTime=12 # in seconds
+fepBlock=5 # the block number at which FEP is enabled we will wait on the L2 for this block number before starting agg layer stuff
 
 l1_rpc_url=$(kurtosis port print cdk el-1-geth-lighthouse rpc)
 contracts_container=$(docker ps -a --filter "name=contracts-001" --format "{{.ID}}")
@@ -32,10 +34,10 @@ docker cp $contracts_container:/opt/contract-deploy/create_new_rollup.json .
 # just clone it ourselves and use it so taking it from the container seems the safest and easiest path right now.
 if [ ! -d "zkevm-contracts" ]; then
     docker cp $contracts_container:/opt/zkevm-contracts .
-    cd zkevm-contracts
+    pushd zkevm-contracts
     npm i 
     npx hardhat compile
-    cd $pwd
+    popd
 fi
 
 if [ ! -d "lxly-bridge-and-call" ]; then
@@ -100,12 +102,12 @@ jq ".sovereignParams.emergencyBridgePauser = \"$adminZkEVM\"" create_rollup_para
 jq ".sovereignParams.emergencyBridgeUnpauser = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".sovereignParams.proxiedTokensManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.aggchainManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initParams.l2BlockTime = 1" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.l2BlockTime = $blockTime" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.submissionInterval = 4" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.optimisticModeManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.aggregationVkey = \"$aggregationVkey\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.rangeVkeyCommitment = \"$rangeVkeyCommitment\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
-jq ".aggchainParams.initParams.startingBlockNumber = 10" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
+jq ".aggchainParams.initParams.startingBlockNumber = $fepBlock" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.initParams.startingTimestamp = $now" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.vKeyManager = \"$adminZkEVM\"" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
 jq ".aggchainParams.useDefaultSigners = false" create_rollup_parameters.json > temp.json; mv temp.json create_rollup_parameters.json
@@ -123,8 +125,7 @@ rm -rf genesis-rollupID*
 rm -rf output-rollupID*
 popd
 
-
-cd zkevm-contracts
+pushd zkevm-contracts
 
 # make sure the l1 endpoint is pointing to kurtosis from hardhat
 sed -i '' "s#url: '.*',#url: 'http://${l1_rpc_url}',#g" hardhat.config.ts
@@ -176,7 +177,7 @@ npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --net
 echo "[contracts]: Done\n"
 
 # copy the created rollup and genesis file from the zkevm folder to where we can work with them easily
-cd $pwd
+popd
 
 mv $(ls zkevm-contracts/tools/createSovereignGenesis/genesis-rollupID*.json) genesis.json
 
@@ -207,11 +208,13 @@ echo "[contracts] Step 7: Done\n"
 echo "[rollup] Step 1: Creating configs"
 # erigon config
 mkdir -p erigon-config
-cp base-dynamic-network-config.yaml erigon-config/dynamic-network-config.yaml
+cp ./templates/base-dynamic-network-config.yaml erigon-config/dynamic-network-config.yaml
 
 sed -i '' "s#zkevm.l1-rpc-url: .*#zkevm.l1-rpc-url: http://$l1_rpc_url#" erigon-config/dynamic-network-config.yaml
 sed -i '' "s/zkevm.l2-chain-id: .*/zkevm.l2-chain-id: $l2ChainId/" erigon-config/dynamic-network-config.yaml
 sed -i '' "s/zkevm.address-sequencer: .*/zkevm.address-sequencer: $sequencer_address/" erigon-config/dynamic-network-config.yaml
+sed -i '' "s/zkevm.sequencer-block-seal-time: .*/zkevm.sequencer-block-seal-time: ${blockTime}s/" erigon-config/dynamic-network-config.yaml
+sed -i '' "s/zkevm.sequencer-empty-block-seal-time: .*/zkevm.sequencer-empty-block-seal-time: ${blockTime}s/" erigon-config/dynamic-network-config.yaml
 
 address_zkevm=$(jq -r '.rollupAddress' create_rollup_output.json)
 sed -i '' "s/zkevm.address-zkevm: .*/zkevm.address-zkevm: $address_zkevm/" erigon-config/dynamic-network-config.yaml
@@ -219,11 +222,11 @@ sed -i '' "s/zkevm.address-rollup: .*/zkevm.address-rollup: $rollupManagerAddres
 sed -i '' "s/zkevm.address-ger-manager: .*/zkevm.address-ger-manager: $address_ger/" erigon-config/dynamic-network-config.yaml
 
 # conf file
-cp base-dynamic-network-conf.json erigon-config/dynamic-network-conf.json
+cp ./templates/base-dynamic-network-conf.json erigon-config/dynamic-network-conf.json
 root=$(jq -r '.genesis' create_rollup_output.json)
 sed -i '' "s/\"root\": .*/\"root\": \"$root\",/" erigon-config/dynamic-network-conf.json
 
-cp base-dynamic-network-chainspec.json erigon-config/dynamic-network-chainspec.json
+cp ./templates/base-dynamic-network-chainspec.json erigon-config/dynamic-network-chainspec.json
 sed -i '' "s/chainId\": .*/chainId\": $l2ChainId,/" erigon-config/dynamic-network-chainspec.json
 
 # This is a jq script to transform the CDK-style genesis file into an allocs file for erigon
@@ -283,13 +286,13 @@ sleep 5
 # wait until we have 10 blocks on the L2 before starting the agg oracle - FEP is enabled at block 10 on the L2
 for i in {1..1000}; do
     number=$(cast block -r "http://127.0.0.1:8123" --json | jq '.number' | xargs cast to-dec)
-    if [ "$number" -gt 10 ]; then
+    if [ "$number" -gt $fepBlock ]; then
         break
     fi
-    echo "Waiting for 10 blocks on the L2... $number"
+    echo "Waiting for $fepBlock blocks on the L2... $number"
     sleep 2
 done
-echo "10 blocks on the L2 found, continuing..."
+echo "$fepBlock blocks on the L2 found, continuing..."
 
 echo "Launching deterministic deployment proxy"
 signer_address="0x3fab184622dc19b6109349b94811493bf2a45362"
@@ -317,15 +320,15 @@ export ADDRESS_LXLY_BRIDGE=0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe
 export DEPLOYER_PRIVATE_KEY="$master_key"
 
 echo "Running bridge deploy and call on L1"
-cd lxly-bridge-and-call
+pushd lxly-bridge-and-call
 forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "$l1_rpc_url" --legacy --broadcast
-cd $pwd
+popd
 echo "Done bridge deploy and call on L1"
 
 echo "Running bridge deploy and call on L2"
-cd lxly-bridge-and-call
+pushd lxly-bridge-and-call
 forge script script/DeployInitBridgeAndCall.s.sol --rpc-url "http://127.0.0.1:8123" --legacy --broadcast
-cd $pwd
+popd
 echo "Done bridge deploy and call on L2"
 
 echo "Adding signer to the AggchainFEP contract"
@@ -446,6 +449,13 @@ docker run --rm --name reth-genesis -v ./reth-config:/etc/reth-config -v ./erigo
     -chain-config /etc/erigon-config/dynamic-network-conf.json \
     -chainspec /etc/erigon-config/dynamic-network-chainspec.json \
     -normalize-balances=true
+
+# now we need to tweak the reth genesis file a little
+pushd reth-config
+jq '.config' reth-genesis.json > rsp-genesis.json
+# jq '.config.terminalTotalDifficulty = "0x0"' reth-genesis.json > temp.json; mv temp.json reth-genesis.json
+# jq '.config.terminalTotalDifficultyPassed = true' reth-genesis.json > temp.json; mv temp.json reth-genesis.json
+popd
 
 docker run --rm --name reth-init -v ./reth-config:/etc/reth-config -v ./reth-data:/etc/data ghcr.io/paradigmxyz/reth init \
     --datadir /etc/data \
